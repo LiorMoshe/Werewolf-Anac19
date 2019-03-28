@@ -22,7 +22,7 @@ class Werewolf(object):
         such as number of players, how many times an agent can talk per day, etc.
         :return: None
         """
-        pass
+        print("Initialized")
 
     def dayStart(self):
         pass
@@ -52,7 +52,7 @@ class Werewolf(object):
         pass
 
 
-if __name__=="__main":
+if __name__=="__main__":
     # Sample code, how to connect to the server.
     my_agent = Werewolf()
     aiwolfpy.connect_parse(my_agent)
