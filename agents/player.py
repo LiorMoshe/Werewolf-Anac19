@@ -30,10 +30,27 @@ class GameSettings(object):
         self._whisper_before_revote = server_game_settings['whisperBeforeRevote']
 
 
-
 class GamePhase(Enum):
     DAY = 1
     NIGHT = 2
+
+
+class Request(Enum):
+    """
+    Represents all the available requests that we can receive from the game's server.
+    """
+    NAME = 1
+    ROLE = 2
+    INITIALIZE = 3
+    DAILY_INITIALIZE = 4
+    DAILY_FINISH = 5
+    FINISH = 6
+    VOTE = 7
+    ATTACK = 8
+    GUARD = 9
+    DIVINE = 10
+    TALK = 11
+    WHISPER = 12
 
 
 class GameState(object):
@@ -115,16 +132,16 @@ class Player(ABC):
     def initialize(self, base_info, diff_data, game_setting):
         """
         Initialization should be common between all players.
-        :param base_info:
-        :param diff_data:
-        :param game_setting:
+        :param base_info: Current state of the game.
+        :param diff_data: Pandas dataframe that holds difference since last update.
+        :param game_setting: The game settings.
         :return:
         """
         self._game_settings = GameSettings(game_setting)
         self._base_info = GameState(base_info)
 
     def dayStart(self):
-        pass
+        self._phase = GamePhase.DAY
 
     @abstractmethod
     def talk(self):
@@ -154,6 +171,6 @@ class Player(ABC):
         pass
 
     def update(self, base_info, diff_data, request):
-        pass
+        request = Request[request]
 
 
