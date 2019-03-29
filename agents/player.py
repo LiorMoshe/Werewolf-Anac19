@@ -114,7 +114,7 @@ class Player(ABC):
         return self._base_info
 
     @abstractmethod
-    def extract_state_info(self):
+    def extract_state_info(self, base_info):
         """
         Each agent will extract relevant information from the
         given state which will be received from the game's server.
@@ -172,5 +172,6 @@ class Player(ABC):
 
     def update(self, base_info, diff_data, request):
         request = Request[request]
+        self.extract_state_info()
 
 

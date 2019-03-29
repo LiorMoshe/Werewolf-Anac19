@@ -30,7 +30,7 @@ class Seer(Villager):
     def guard(self):
         pass
 
-    def extract_state_info(self):
+    def extract_state_info(self, base_info):
         pass
 
 
