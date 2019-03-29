@@ -1,5 +1,5 @@
 from ..player import Player
 
 
-class Uninformed(Player):
+class Informed(Player):
     pass
