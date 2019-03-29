@@ -8,41 +8,27 @@ class GameSettings(object):
     Currently these are dummy values - will be set in set_game_settings.
     """
 
-    maxRevote = 0
+    def __init__(self, server_game_settings):
+        self._enable_no_attack = server_game_settings['enableNoAttack']
+        self._enable_no_execution = server_game_settings['enableNoExecution']
+        self._enable_role_request = server_game_settings['enableRoleRequest']
+        self._max_attack_revote = server_game_settings['maxAttackRevote']
+        self._max_revote = server_game_settings['maxRevote']
+        self._max_skip = server_game_settings['maxSkip']
+        self._max_talk = server_game_settings['maxTalk']
+        self._max_talk_turn = server_game_settings['maxTalkTurn']
+        self._max_whisper = server_game_settings['maxWhisper']
+        self._max_whisper_turn = server_game_settings['maxWhisperTurn']
+        self._player_num = server_game_settings['playerNum']
+        self._random_seed = server_game_settings['randomSeed']
+        self._role_num_map = server_game_settings['roleNumMap']
+        self._talk_on_first_day = server_game_settings['talkOnFirstDay']
+        self._time_limit = server_game_settings['timeLimit']
+        self._validate_utterance = server_game_settings['validateUtterance']
+        self._votable_first_day = server_game_settings['votableInFirstDay']
+        self._vote_visible = server_game_settings['voteVisible']
+        self._whisper_before_revote = server_game_settings['whisperBeforeRevote']
 
-    randomSeed = 0
-
-    validateUtterance = True
-
-    enableNoExecution = False
-
-    roleNumMap = {}
-
-    votableInFirstDay = False
-
-    maxSkip = 0
-
-    timeLimit = -1
-
-    maxWhisper = 0
-
-    maxWhisperTurn = 0
-
-    whisperBeforeRevote = False
-
-    maxTalkTurn = 20
-
-    playerNum = 5
-
-    voteVisible = True
-
-    maxAttackRevote = 1
-
-    talkOnFirstDay = False
-
-    enableNoAttack = False
-
-    maxTalk = 10
 
 
 class GamePhase(Enum):
@@ -50,10 +36,25 @@ class GamePhase(Enum):
     NIGHT = 2
 
 
-class BaseInfo(object):
+class GameState(object):
     """
     Defines the current state of the game as received from the server.
     """
+
+    def __init__(self, server_base_info):
+        """
+        Initialize the current state of the game based on the json
+        received from the server.
+        :param server_base_info: JSON received from the server representing
+        current state of the game.
+        """
+        self._agentIndex = server_base_info['agentIdx']
+        self._role = server_base_info['myRole']
+        self._role_map = server_base_info['roleMap']
+        self._day = server_base_info['day']
+        self._remain_talk_map = server_base_info['remainTalkMap']
+        self._remain_whisper_map = server_base_info['remainWhisperMap']
+        self._status_map = server_base_info['statusMap']
 
 
 class Player(ABC):
@@ -119,7 +120,8 @@ class Player(ABC):
         :param game_setting:
         :return:
         """
-        self.base_info
+        self._game_settings = GameSettings(game_setting)
+        self._base_info = GameState(base_info)
 
     def dayStart(self):
         pass
