@@ -1,4 +1,5 @@
 import aiwolfpy
+from agents.uninformed.seer import  Seer
 
 """
 Sample of an agent based on the aiwolfpy standards.
@@ -54,5 +55,5 @@ class Werewolf(object):
 
 if __name__=="__main__":
     # Sample code, how to connect to the server.
-    my_agent = Werewolf()
+    my_agent = Seer()
     aiwolfpy.connect_parse(my_agent)
