@@ -1,5 +1,5 @@
 import aiwolfpy
-
+import messages_manager
 """
 Sample of an agent based on the aiwolfpy standards.
 """
@@ -8,6 +8,7 @@ Sample of an agent based on the aiwolfpy standards.
 class Werewolf(object):
 
     def __init__(self):
+        self.msg_manager = None;
         pass
 
     def getName(self):
@@ -22,7 +23,7 @@ class Werewolf(object):
         such as number of players, how many times an agent can talk per day, etc.
         :return: None
         """
-        pass
+        self.msg_manager = messages_manager(base_info["agentIdx"], game_setting["playerNum"])
 
     def dayStart(self):
         pass
@@ -49,7 +50,8 @@ class Werewolf(object):
         pass
 
     def update(self, base_info, diff_data, request):
-        pass
+        self.msg_manager.add_messages(diff_data)
+        self.msg_manager.update_base_info(base_info)
 
 
 if __name__=="__main":
