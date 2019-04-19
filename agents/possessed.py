@@ -17,7 +17,7 @@ class Possessed(Villager, Werewolf):
         return ""
 
     def vote(self):
-        pass
+        return "1"
 
     def attack(self):
         pass

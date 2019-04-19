@@ -24,7 +24,7 @@ class Seer(Villager):
 
 
     def divine(self):
-        pass
+        return "1"
 
 
     def guard(self):
