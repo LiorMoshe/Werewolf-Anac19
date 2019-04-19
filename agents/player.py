@@ -188,7 +188,8 @@ class Player(ABC):
     def update(self, base_info, diff_data, request):
         print("Received update, request type: ", request)
         request = Request[request]
-        print("Received game diff:", diff_data)
+        print("Received game diff:")
+        print(diff_data)
         self.extract_state_info(base_info)
 
 

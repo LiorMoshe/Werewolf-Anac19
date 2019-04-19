@@ -16,7 +16,7 @@ class Seer(Villager):
 
 
     def vote(self):
-        pass
+        return "1"
 
 
     def attack(self):
