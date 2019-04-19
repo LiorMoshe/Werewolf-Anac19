@@ -10,17 +10,11 @@ class Possessed(Villager, Werewolf):
     def getName(self):
         return "Possessed"
 
-    def initialize(self, base_info, diff_data, game_setting):
-        pass
-
-    def dayStart(self):
-        pass
-
     def talk(self):
-        pass
+        return ""
 
     def whisper(self):
-        pass
+        return ""
 
     def vote(self):
         pass
@@ -34,8 +28,5 @@ class Possessed(Villager, Werewolf):
     def guard(self):
         pass
 
-    def finish(self):
-        pass
-
-    def update(self, base_info, diff_data, request):
+    def extract_state_info(self, base_info):
         pass

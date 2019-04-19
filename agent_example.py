@@ -1,6 +1,7 @@
 import aiwolfpy
 import messages_manager
 from agents.uninformed.seer import Seer
+from agents.agent_container import AgentContainer
 
 """
 Sample of an agent based on the aiwolfpy standards.
@@ -29,16 +30,16 @@ class Werewolf(object):
         print("Initialized")
 
     def dayStart(self):
-        pass
+        print("Day Started")
 
     def talk(self):
-        pass
+        return ""
 
     def whisper(self):
-        pass
+        return ""
 
     def vote(self):
-        pass
+        return ""
 
     def attack(self):
         pass
@@ -53,11 +54,12 @@ class Werewolf(object):
         pass
 
     def update(self, base_info, diff_data, request):
+        print("Got request of type: ", request)
         self.msg_manager.add_messages(diff_data)
         self.msg_manager.update_base_info(base_info)
 
 
 if __name__=="__main__":
     # Sample code, how to connect to the server.
-    my_agent = Seer()
+    my_agent = AgentContainer()
     aiwolfpy.connect_parse(my_agent)

@@ -62,6 +62,12 @@ class GameState(object):
         """
         Initialize the current state of the game based on the json
         received from the server.
+        Contents of game info:
+        Status map: Indicates which player is dead or alive in the game.
+        Remain Talk Map:
+        Remain Whisper Map:
+        Game Role: Which role this player plays in the game.
+        Agent Index: The index of the player in the game.
         :param server_base_info: JSON received from the server representing
         current state of the game.
         """
@@ -72,6 +78,15 @@ class GameState(object):
         self._remain_talk_map = server_base_info['remainTalkMap']
         self._remain_whisper_map = server_base_info['remainWhisperMap']
         self._status_map = server_base_info['statusMap']
+        self.log()
+
+    def log(self):
+        print("Agent index is: " + str(self._agentIndex) + " his role: " + self._role)
+        print("Game role map: ", self._role_map)
+        print("Day in game: ", self._day)
+        print("Remain Talk Map: ", self._remain_talk_map)
+        print("Remain Whisper Map: ", self._remain_whisper_map)
+        print("Status map: ", self._status_map)
 
 
 class Player(ABC):
@@ -173,6 +188,7 @@ class Player(ABC):
     def update(self, base_info, diff_data, request):
         print("Received update, request type: ", request)
         request = Request[request]
+        print("Received game diff:", diff_data)
         self.extract_state_info(base_info)
 
 
