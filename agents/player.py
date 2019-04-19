@@ -171,7 +171,8 @@ class Player(ABC):
         pass
 
     def update(self, base_info, diff_data, request):
+        print("Received update, request type: ", request)
         request = Request[request]
-        self.extract_state_info()
+        self.extract_state_info(base_info)
 
 

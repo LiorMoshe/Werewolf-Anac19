@@ -8,11 +8,11 @@ class Seer(Villager):
 
 
     def talk(self):
-        pass
+        return ""
 
 
     def whisper(self):
-        pass
+        return ""
 
 
     def vote(self):

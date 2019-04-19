@@ -1,5 +1,5 @@
 import aiwolfpy
-from agents.uninformed.seer import  Seer
+from agents.uninformed.seer import Seer
 
 """
 Sample of an agent based on the aiwolfpy standards.
