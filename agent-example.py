@@ -1,5 +1,7 @@
 import aiwolfpy
 import messages_manager
+from agents.uninformed.seer import Seer
+
 """
 Sample of an agent based on the aiwolfpy standards.
 """
@@ -24,6 +26,7 @@ class Werewolf(object):
         :return: None
         """
         self.msg_manager = messages_manager(base_info["agentIdx"], game_setting["playerNum"])
+        print("Initialized")
 
     def dayStart(self):
         pass
@@ -54,7 +57,7 @@ class Werewolf(object):
         self.msg_manager.update_base_info(base_info)
 
 
-if __name__=="__main":
+if __name__=="__main__":
     # Sample code, how to connect to the server.
-    my_agent = Werewolf()
+    my_agent = Seer()
     aiwolfpy.connect_parse(my_agent)
