@@ -33,7 +33,7 @@ class Werewolf(object):
         print("Day Started")
 
     def talk(self):
-        return ""
+        return "Skip"
 
     def whisper(self):
         return ""

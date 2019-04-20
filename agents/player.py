@@ -1,5 +1,6 @@
 from abc import *
 from enum import Enum
+from .information_processing.agent_belief_builder import AgentBeliefBuilder
 
 
 class GameSettings(object):
@@ -80,6 +81,9 @@ class GameState(object):
         self._status_map = server_base_info['statusMap']
         self.log()
 
+    def is_alive(self, index):
+        return self._status_map[str(index)] == 'ALIVE'
+
     def log(self):
         print("Agent index is: " + str(self._agentIndex) + " his role: " + self._role)
         print("Game role map: ", self._role_map)
@@ -102,6 +106,7 @@ class Player(ABC):
         self._game_settings = None
         self._base_info = None
         self._phase = GamePhase.DAY
+        self._belief_builder = None
 
     @property
     def game_settings(self):
@@ -155,6 +160,11 @@ class Player(ABC):
         self._game_settings = GameSettings(game_setting)
         self._base_info = GameState(base_info)
 
+        # Initialize the agent belief builder.
+        self._belief_builder = AgentBeliefBuilder(self._game_settings._player_num,
+                                                  [i for i in range(1, self._game_settings._player_num)
+                                                   if i != self._base_info._agentIndex])
+
     def dayStart(self):
         self._phase = GamePhase.DAY
 
@@ -186,10 +196,9 @@ class Player(ABC):
         pass
 
     def update(self, base_info, diff_data, request):
-        print("Received update, request type: ", request)
-        request = Request[request]
         print("Received game diff:")
         print(diff_data)
+        self._belief_builder.update_beliefs(diff_data)
         self.extract_state_info(base_info)
 
 

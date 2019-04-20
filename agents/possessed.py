@@ -1,5 +1,6 @@
 from .uninformed.villager import Villager
 from .informed.werewolf import Werewolf
+from aiwolfpy.contentbuilder import *
 
 
 class Possessed(Villager, Werewolf):
@@ -11,7 +12,7 @@ class Possessed(Villager, Werewolf):
         return "Possessed"
 
     def talk(self):
-        return ""
+        return "REQUEST Agent2 (DIVINATION Agent3)"
 
     def whisper(self):
         return ""

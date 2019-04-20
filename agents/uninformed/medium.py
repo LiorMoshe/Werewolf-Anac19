@@ -10,7 +10,7 @@ class Medium(Villager):
         return "Medium"
 
     def talk(self):
-        return ""
+        return "COMINGOUT Agent[01] WEREWOLF"
 
     def whisper(self):
         return ""
@@ -22,7 +22,7 @@ class Medium(Villager):
         pass
 
     def divine(self):
-        pass
+        return "1"
 
     def guard(self):
         pass

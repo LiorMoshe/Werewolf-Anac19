@@ -10,7 +10,7 @@ class Villager(Uninformed):
         return "Villager"
 
     def talk(self):
-        return ""
+        return "COMINGOUT Agent[01] WEREWOLF"
 
     def whisper(self):
         return ""

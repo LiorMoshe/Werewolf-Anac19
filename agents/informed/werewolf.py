@@ -10,7 +10,7 @@ class Werewolf(Informed):
         return "Werewolf"
 
     def talk(self):
-        return ""
+        return "COMINGOUT Agent[01] WEREWOLF"
 
     def whisper(self):
         return ""
@@ -19,7 +19,7 @@ class Werewolf(Informed):
         return "1"
 
     def attack(self):
-        pass
+        return "1"
 
     def divine(self):
         pass

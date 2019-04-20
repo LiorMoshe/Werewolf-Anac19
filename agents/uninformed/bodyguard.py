@@ -10,7 +10,7 @@ class Bodyguard(Villager):
         return "Bodyguard"
 
     def talk(self):
-        return ""
+        return "COMINGOUT Agent[01] WEREWOLF"
 
     def whisper(self):
         return ""
@@ -25,7 +25,7 @@ class Bodyguard(Villager):
         pass
 
     def guard(self):
-        pass
+        return "1"
 
     def extract_state_info(self, base_info):
         pass
