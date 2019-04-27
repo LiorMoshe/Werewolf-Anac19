@@ -59,7 +59,7 @@ class AgentBelief(object):
         # All of the agents requests, mapped by day.
         self._agent_requests = {}
 
-        # All of the agents inquires, mapped by day.
+        # All  of the agents inquires, mapped by day.
         self._agents_inquires = {}
 
         # All the agents votes, mapped by day.
