@@ -17,6 +17,18 @@ class AgentBeliefBuilder(object):
         for index in agent_indices:
             self._agent_beliefs[index] = AgentBelief(index)
 
+    def update_role_map(self, role_map):
+        """
+        Update the beliefs based on role map, used when we are in the informed group.
+        :param role_map:
+        :return:
+        """
+        print("Updating based on role map: ", role_map)
+        for agent_idx, role in role_map.items():
+            agent_idx = int(agent_idx)
+            if agent_idx in self._agent_beliefs.keys():
+                self._agent_beliefs[int(agent_idx)].set_role(role)
+
     def update_beliefs(self, diff_data):
         """
         Given the diff data received from the server update the beliefs of the agents

@@ -1,13 +1,37 @@
 from .message_parsing import *
 from enum import Enum
 
-class MessageType(Enum):
-    TALK = 1,
-    VOTE = 2
-
-
 # These sentences currently, don't help us much (maybe will be used in future dev).
 UNUSEFUL_SENTENCES = ['Skip', 'Over']
+
+
+class GameRoles(Enum):
+    VILLAGER = 1,
+    WEREWOLF = 2,
+    SEER = 3,
+    BODYGUARD = 4,
+    POSSESSED = 5,
+    MEDIUM = 6
+
+
+class MessageType(Enum):
+    """
+    All the different message types we can receive from the server.
+    TALK - Sentence has been sent by the agent.
+    VOTE - The agent has given the following vote.
+    EXECUTE - The agent has been executed (based on the votes).
+    DEAD - The agent has been killed by the werewolves during the night.
+    ATTACK_VOTE - The agent is a werewolf cooperator of ours (we will see this message only when we are in
+    the werewolves group).
+    FINISH - This is when the all players reveal their real identities.
+    """
+    TALK = 1,
+    VOTE = 2,
+    EXECUTE = 3,
+    DEAD = 4,
+    ATTACK_VOTE = 5,
+    WHISPER = 6,
+    FINISH = 7,
 
 
 class AgentBelief(object):
@@ -26,9 +50,6 @@ class AgentBelief(object):
         # Map the actions done by the agent on given days/ talk number (TBD)
         self._agent_actions = {}
 
-        # Holds estimations of this agent over other agents roles, who he ESTIMATED.
-        self._agent_estimations = {}
-
         # Holds knowledge of agent over other agents roles, who he said is COMINGOUT.
         self._agent_knowledge = {}
 
@@ -46,6 +67,18 @@ class AgentBelief(object):
 
         # Pairs of messages such that if one is true the other is false and vv.
         self._agent_xor_messages = {}
+
+        # All or messages that this agent has sent.
+        self._agent_or_messages = {}
+
+        # When we get a final finish message all agents reveal their true roles.
+        self._agent_real_role = None
+
+        # In case it is a werewolf we will receive messages from it during the night phase in the form of whispers.
+        self._agent_whispers = {}
+
+    def set_role(self, role):
+        self._agent_role = GameRoles[role]
 
     def save_message_based_on_type(self, message, talk_number):
         """
@@ -70,13 +103,13 @@ class AgentBelief(object):
         elif message.type == SentenceType.AND:
             self._agent_knowledge[talk_number] = message.sentences
         elif message.type == SentenceType.OR:
-            pass
+            self._agent_or_messages[talk_number] = message
         elif message.type == SentenceType.XOR:
             self._agent_xor_messages[talk_number] = (message.sentences[0],  message.sentences[1])
         elif message.type == SentenceType.NOT:
             self._agent_objections[talk_number] = message
 
-    def update_belief(self, diff_data, message_type=MessageType.TALK):
+    def update_belief(self, diff_data):
         """
         Update our belief of this agents actions, we will get all the data that was sent
         before the agent talked (meaning all the rows in the original diff_data dataframe that were before
@@ -90,31 +123,64 @@ class AgentBelief(object):
         """
         # Currently we will only look at the sentence of this agent.
         agent_sentence = diff_data.loc[len(diff_data.index) - 1, 'text']
-        talk_number = 0
+        talk_number = diff_data.loc[len(diff_data.index) - 1, 'idx']
+        message_type = MessageType[diff_data.loc[len(diff_data.index) - 1, 'type'].upper()]
+        day = diff_data.loc[len(diff_data.index) - 1, 'day']
+
         print("MESSAGE TYPE: ", message_type)
+        parsed_sentence = agent_sentence
+        if agent_sentence not in UNUSEFUL_SENTENCES:
+            parsed_sentence = process_sentence(agent_sentence, self._index)
 
         if message_type == MessageType.TALK:
             if agent_sentence not in UNUSEFUL_SENTENCES:
-                parsed_sentence = process_sentence(agent_sentence, self._index)
-                print("PARSED: ", parsed_sentence)
-                # if parsed_sentence.type in KNOWLEDGE:
-                #     self._agent_knowledge[talk_number] = parsed_sentence
-                # elif parsed_sentence.type in ACTIONS:
-                #     self.add_new_action(parsed_sentence, talk_number)
-                # elif parsed_sentence.type in ACTION_RESULT:
-                #     self.add_new_action_result(parsed_sentence, talk_number)
-                # elif parsed_sentence.type == SentenceType.REQUEST:
-                #     self._agent_requests[talk_number] = parsed_sentence
-                # elif parsed_sentence.type == SentenceType.INQUIRE:
-                #     self._agents_inquires[talk_number] = parsed_sentence
-                # elif parsed_sentence.type == SentenceType.BECAUSE:
-
+                print("Current sentence: ", agent_sentence)
+                self.save_message_based_on_type(parsed_sentence, talk_number)
         elif message_type == MessageType.VOTE:
-            self.add_new_vote(agent_sentence, talk_number)
+            self.add_public_vote(agent_sentence, day)
+        elif message_type == MessageType.EXECUTE:
+            self._agent_status = Dead(self._index, Species.HUMANS)
+        elif message_type == MessageType.DEAD:
+            self._agent_status = Dead(self._index, Species.WEREWOLVES)
+        elif message_type == MessageType.ATTACK_VOTE:
+            self.add_attack_vote(parsed_sentence, talk_number)
+        elif message_type == MessageType.WHISPER:
+            self.add_whisper(parsed_sentence, talk_number)
+        elif message_type == MessageType.FINISH:
+            self.save_agent_real_role(parsed_sentence)
 
-    def add_new_vote(self, sentence, talk_number):
-        parsed_message = process_sentence(sentence, self._index)
-        self._agent_votes[talk_number] = parsed_message
+    def save_agent_real_role(self, parsed_message):
+        """
+        In the final finish all agents come out with their real roles. We will save it in the belief
+        of the agents in order to see how our belief about the agents matches the reality.
+        The expectation is that when the message type is FINISH we will always
+        receive a  COMINGOUT message.
+        :param parsed_message: Sentence sent from the agent.
+        :return:
+        """
+        self._agent_real_role = GameRoles[parsed_message.role]
+
+    def add_whisper(self, parsed_message, talk_number):
+        if self._agent_role is not GameRoles.WEREWOLF:
+            self._agent_role = GameRoles.WEREWOLF
+
+        self._agent_whispers[talk_number] = parsed_message
+
+    def add_attack_vote(self, parsed_message, talk_number):
+        """
+        Given an attack vote by a member of our werewolves group save it in it's actions and update
+        the role of this agent to a werewolf (other agents don't have the ability to attack).
+        :param parsed_message:
+        :param talk_number:
+        :return:
+        """
+        if self._agent_role is not GameRoles.WEREWOLF:
+            self._agent_role = GameRoles.WEREWOLF
+        self._agent_actions[talk_number] = parsed_message
+
+    def add_public_vote(self, parsed_message, day):
+        print("Adding new Vote day: ", day)
+        self._agent_votes[day] = parsed_message
 
     def process_cause_and_effect(self, parsed_sentence, talk_number):
         """
@@ -122,13 +188,15 @@ class AgentBelief(object):
         and effect will be added based on it's type.
         TODO - This function relies on that BECAUSE type only holds two sentences the cause and the effect.
         :param parsed_sentence:
+        :param talk_number
         :return:
         """
         cause, effect = parsed_sentence.sentences
-        effect.reason = cause
+        print("CAUSE: ", cause)
+        print("EFFECT: ", effect)
+        effect._replace(reason=cause)
         self.save_message_based_on_type(effect, talk_number)
         self.save_message_based_on_type(cause, talk_number)
-
 
     def add_new_action(self, action, talk_number):
         """
@@ -137,10 +205,9 @@ class AgentBelief(object):
         :param talk_number:
         :return:
         """
+        self._agent_actions[talk_number] = action
 
-        if action.type == SentenceType.VOTE:
-            # If this is a vote action we will fill this information with no reason for the vote.
-            self._agent_votes[talk_number] = Vote(action.target, None)
+
 
     def add_new_action_result(self, action_result, talk_number):
         if action_result.type == SentenceType.VOTED:

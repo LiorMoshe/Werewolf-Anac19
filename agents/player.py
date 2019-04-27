@@ -164,6 +164,7 @@ class Player(ABC):
         self._belief_builder = AgentBeliefBuilder(self._game_settings._player_num,
                                                   [i for i in range(1, self._game_settings._player_num)
                                                    if i != self._base_info._agentIndex])
+        self._belief_builder.update_role_map(self._base_info._role_map)
 
     def dayStart(self):
         self._phase = GamePhase.DAY
@@ -196,8 +197,11 @@ class Player(ABC):
         pass
 
     def update(self, base_info, diff_data, request):
+        print("Request type: ", request)
         print("Received game diff:")
-        print(diff_data)
+        print(diff_data.to_string())
+        if request == "WHISPER":
+            print("Base info: ", base_info)
         self._belief_builder.update_beliefs(diff_data)
         self.extract_state_info(base_info)
 
