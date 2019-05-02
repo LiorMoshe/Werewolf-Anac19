@@ -1,17 +1,9 @@
 from .message_parsing import *
 from enum import Enum
+from ..game_roles import GameRoles
 
 # These sentences currently, don't help us much (maybe will be used in future dev).
 UNUSEFUL_SENTENCES = ['Skip', 'Over']
-
-
-class GameRoles(Enum):
-    VILLAGER = 1,
-    WEREWOLF = 2,
-    SEER = 3,
-    BODYGUARD = 4,
-    POSSESSED = 5,
-    MEDIUM = 6
 
 
 class MessageType(Enum):
@@ -77,6 +69,18 @@ class AgentBelief(object):
         # In case it is a werewolf we will receive messages from it during the night phase in the form of whispers.
         self._agent_whispers = {}
 
+        # Indexes of agents that this agent voted against/ agents that he questions.
+        self._enemies = {}
+
+        # A role that the agent admitted to be, can't know if it's truth or a lie.
+        # Keep the sentence in which he admitted.
+        self._agent_admitted_role = {"role": None, "reason": None}
+
+        self._lying_detected = False
+
+        # Probability of the other agents cooperating or oppposing to this agent.
+        self._cooperator_probs = {}
+
     def set_role(self, role):
         self._agent_role = GameRoles[role]
 
@@ -118,7 +122,6 @@ class AgentBelief(object):
         account how he reacts to other agents messages, just react to what he thinks).
         :param diff_data: Pandas dataframe that represents what happened since we last talked until this agent
         talked.
-        :param message_type
         :return: None
         """
         # Currently we will only look at the sentence of this agent.
@@ -148,6 +151,33 @@ class AgentBelief(object):
             self.add_whisper(parsed_sentence, talk_number)
         elif message_type == MessageType.FINISH:
             self.save_agent_real_role(parsed_sentence)
+
+    def add_knowledge(self, sentences, talk_number):
+        """
+        Handling the case where the agent says he has some role, we can't be sure that he is saying the truth.
+        :param sentences:
+        :param talk_number
+        :return:
+        """
+        for sentence in sentences:
+            if sentence.type == SentenceType.COMINGOUT:
+                if sentence.subject == sentence.target:
+                    if self._agent_admitted_role:
+                        self._agent_admitted_role.role = GameRoles[sentence.role]
+                        self._agent_admitted_role.reason = sentence
+                    else:
+                        # If the agent is a dumbass and admitted to two roles twice he is a liar.
+                        self._lying_detected = False
+        if len(sentences) == 1:
+            self._agent_knowledge[talk_number] = sentences[0]
+        else:
+            self._agent_knowledge[talk_number] = sentences
+
+    def get_status(self):
+        return self._agent_status
+
+    def get_admitted_role(self):
+        return self._agent_admitted_role
 
     def save_agent_real_role(self, parsed_message):
         """
@@ -181,6 +211,10 @@ class AgentBelief(object):
     def add_public_vote(self, parsed_message, day):
         print("Adding new Vote day: ", day)
         self._agent_votes[day] = parsed_message
+        if parsed_message.votedAgainst not in self._enemies:
+            self._enemies[parsed_message.votedAgainst] = 1
+        else:
+            self._enemies[parsed_message.votedAgainst] += 1
 
     def process_cause_and_effect(self, parsed_sentence, talk_number):
         """
@@ -206,8 +240,6 @@ class AgentBelief(object):
         :return:
         """
         self._agent_actions[talk_number] = action
-
-
 
     def add_new_action_result(self, action_result, talk_number):
         if action_result.type == SentenceType.VOTED:

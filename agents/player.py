@@ -1,6 +1,7 @@
 from abc import *
 from enum import Enum
 from .information_processing.agent_belief_builder import AgentBeliefBuilder
+from .strategies.rule_based_strategy import  RuleBasedStrategy
 
 
 class GameSettings(object):
@@ -107,6 +108,7 @@ class Player(ABC):
         self._base_info = None
         self._phase = GamePhase.DAY
         self._belief_builder = None
+        self._strategy = None
 
     @property
     def game_settings(self):
@@ -166,6 +168,8 @@ class Player(ABC):
                                                    if i != self._base_info._agentIndex])
         self._belief_builder.update_role_map(self._base_info._role_map)
 
+        self._strategy = RuleBasedStrategy(self._base_info._agentIndex, self._base_info._role_map)
+
     def dayStart(self):
         self._phase = GamePhase.DAY
 
@@ -202,7 +206,9 @@ class Player(ABC):
         print(diff_data.to_string())
         if request == "WHISPER":
             print("Base info: ", base_info)
-        self._belief_builder.update_beliefs(diff_data)
+        self._strategy.update_beliefs(diff_data)
+        # self._belief_builder.update_beliefs(diff_data)
         self.extract_state_info(base_info)
+
 
 
