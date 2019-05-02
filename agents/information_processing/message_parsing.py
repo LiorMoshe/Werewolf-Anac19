@@ -183,7 +183,7 @@ def process_sentence(sentence, agent_index=None, day=None):
     Given a sentence of a player decide it's type and parse it by creating a matching
     object (which is defined above using named tuples).
     :param sentence: Sentence that will be parsed.
-    :param agent_index: Index of the agent that parsed this sentence.
+    :param agent_index: Index of the agent that said this sentence.
     :param day Day of the message, if it's stated.
     :return: Object representing this sentence.
     """
@@ -196,12 +196,14 @@ def process_sentence(sentence, agent_index=None, day=None):
     elif "REQUEST" in sentence:
         result = parse_request(sentence, agent_index,
                                lambda subject, target, content: Request(subject, target,
-                                                                        process_sentence(content.replace(')', '')),
+                                                                        process_sentence(content.replace(')', ''),
+                                                                                         subject),
                                                                         SentenceType.REQUEST))
     elif "INQUIRE" in sentence:
         result = parse_request(sentence, agent_index,
                                lambda subject, target, content: Inquire(subject, target,
-                                                                        process_sentence(content.replace(')', '', )),
+                                                                        process_sentence(content.replace(')', '', ),
+                                                                                         subject),
                                                                         SentenceType.INQUIRE))
     elif "ESTIMATE" in sentence:
         result = parse_knowledge_sentence(sentence, agent_index)
@@ -218,6 +220,16 @@ def process_sentence(sentence, agent_index=None, day=None):
 
 
 def parse_request(sentence, agent_idx, object_builder):
+    """
+    Process a request sent from a player.
+    In the case of a missing subject in the sentence representing the request (UNSPEC) we will take the subject
+    to be the subject of the parent sentence if the request is nested inside a sentence. If the request is not nested
+    the subject will be the speaker.
+    :param sentence:
+    :param agent_idx:
+    :param object_builder:
+    :return:
+    """
     request, content = sentence.split('(', 1)
     request_parts = [part for part in request.replace('(', '').split(' ') if len(part) != 0]
 
