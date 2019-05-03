@@ -7,6 +7,15 @@ class Species(Enum):
     WEREWOLVES = 2
 
 
+class GameRoles(Enum):
+    VILLAGER = 1,
+    WEREWOLF = 2,
+    SEER = 3,
+    BODYGUARD = 4,
+    POSSESSED = 5,
+    MEDIUM = 6
+
+
 class SentenceType(Enum):
     ESTIMATE = 1,
     COMINGOUT = 2,
@@ -22,20 +31,12 @@ class SentenceType(Enum):
     GUARDED = 12,
     DIVINED = 13,
     VOTED = 14,
-    BECAUSE = 15,
-    AND = 16,
-    XOR = 17,
-    NOT = 18,
-    OR = 19
-
-
-#
-# class LogicType(Enum):
-#     AND = 1,
-#     XOR = 2,
-#     NOT = 3,
-#     OR = 4,
-#     BECAUSE = 5
+    IDENTIFIED = 15
+    BECAUSE = 16,
+    AND = 17,
+    XOR = 18,
+    NOT = 19,
+    OR = 20
 
 
 KNOWLEDGE = [SentenceType.ESTIMATE, SentenceType.COMINGOUT]
@@ -48,22 +49,20 @@ ACTION_RESULT = [SentenceType.ATTACKED, SentenceType.GUARDED, SentenceType.DIVIN
 # Reason = namedtuple('Reason', 'cause effect')
 
 # Represents a logic statement made by a subject regarding the given sentences.
-LogicStatement = namedtuple('LogicStatement', 'subject type sentences reason', defaults=(None,) * 4)
+LogicStatement = namedtuple('LogicStatement', 'subject type sentences reason day described_day', defaults=(None,) * 6)
 
 # Shows vote of an agent against specific agent, can hold reason if there is any.
-Vote = namedtuple('Vote', 'votedAgainst type reason', defaults=(None, SentenceType.VOTE, None))
+Vote = namedtuple('Vote', 'votedAgainst type reason day described_day', defaults=(None, SentenceType.VOTE, None, None
+                                                                                  , None))
 
 # An action done by the subject on the target.
-Action = namedtuple('Action', 'subject target type day reason', defaults=(None,) * 5)
+Action = namedtuple('Action', 'subject target type reason day described_day', defaults=(None,) * 6)
 
 # Result of an action of the subject on the target, if there is any new result it is held in species.
-ActionResult = namedtuple('ActionResult', 'subject target species type day reason', defaults=(None,) * 6)
+ActionResult = namedtuple('ActionResult', 'subject target species type reason day described_day', defaults=(None,) * 7)
 
 # Knowledge represents messages such as COMINGOUT, ESTIMATE where an agent thinks he knows something about other agents.
-Knowledge = namedtuple('Knowledge', 'subject target role type reason', defaults=(None, 5))
-
-# When someone dies we wish to keep the information of which group killed him the public or the werewolves.
-Dead = namedtuple('Dead', 'subject killedBy')
+Knowledge = namedtuple('Knowledge', 'subject target role type reason day described_day', defaults=(None,) * 7)
 
 KNOWLEDGE_TYPES = ['ESTIMATE', 'COMINGOUT']
 
@@ -73,20 +72,13 @@ AVAILABLE_ACTION_RESULTS = ['DIVINED', 'IDENTIFIED', 'GUARDED', 'VOTED', 'ATTACK
 
 LOGIC_OPERATORS = ['AND', 'XOR', 'NOT', 'OR', 'BECAUSE']
 
+Request = namedtuple('Request', 'subject target content type reason day described_day', defaults=(None,) * 6)
 
-class RequestType(Enum):
-    AGREEMENT = 1,
-    ACTION = 2,
-    ACTION_RESULT = 3
+Inquire = namedtuple('Inquire', 'subject target content type reason day described_day', defaults=(None,) * 6)
 
-
-Request = namedtuple('Request', 'subject target content type reason', defaults=(None,) * 5)
-
-Inquire = namedtuple('Inquire', 'subject target type reason', defaults=(None,) * 4)
-
-# An opinion is used when an agent says whether he agrees or disagress with a given sentence
+# An opinion is used when an agent says whether he agrees or disagrees with a given sentence
 # (represented as talk number).
-Opinion = namedtuple('Opinion', 'subject talk_number accept type')
+Opinion = namedtuple('Opinion', 'subject talk_number type referencedSentence day described_day')
 
 
 def extract_agent_idx(message):
@@ -96,12 +88,12 @@ def extract_agent_idx(message):
     :param message:
     :return:
     """
-    if "[" in message and  "]" in message:
-        return message[message.find("[") + 1:message.find("]")]
+    if "[" in message and "]" in message:
+        return int(message[message.find("[") + 1:message.find("]")])
     return message
 
 
-def seperate_sentences(total_sentence):
+def separate_sentences(total_sentence):
     """
     Given a string representing several sentences, split them to a list of sentences.
     :param total_sentence:
@@ -122,220 +114,242 @@ def seperate_sentences(total_sentence):
     return sentences
 
 
-def parse_general_sentence(sentence, validation_func, expected_num_words, object_builder):
-    """
-    All parsing of sentences is pretty similar, we get a sentence perform some validations
-    and then create an object that represents it,  this is a general function which will be used
-    to parse all the sentences.
-    :param sentence:
-    :param validation_func:
-    :param expected_num_words:
-    :param object_builder:
-    :return:
-    """
-    parts_of_sentence = sentence.split(' ')
+class MessageParser(object):
 
-    if len(parts_of_sentence) not in expected_num_words:
-        print("ERROR: There is different number of words than expected: " + str(expected_num_words) + " for sentence " +
-              sentence)
+    def __init__(self):
+        self._talk_number_to_message = {}
 
-    if not validation_func(parts_of_sentence):
-        print("ERROR: The sentence " + sentence + " didn't pass validation")
+    def parse_sentence_with_logic(self, sentence, agent_index, day, talk_number, described_day):
+        """
+        Parse a sentence that contains a logic operator, this is sometimes paired with a subject
+        and sometimes without it
+        :param sentence:
+        :param agent_index
+        :param day
+        :param talk_number
+        :param described_day
+        :return:
+        """
+        first_sentences_idx = sentence.find('(')
+        prefix = sentence[:first_sentences_idx]
+        sentences_content = [s for s in separate_sentences(sentence[first_sentences_idx:]) if
+                             len(s.replace(' ', '')) != 0]
 
-    return object_builder(parts_of_sentence)
+        prefix_parts = prefix.split(' ')
+        if prefix_parts[0] in LOGIC_OPERATORS:
+            subject = agent_index
+            operator_type = SentenceType[prefix_parts[0]]
+        else:
+            subject = extract_agent_idx(prefix_parts[0])
+            operator_type = SentenceType[prefix_parts[1]]
 
+        # Parse the other sentences for which the logic is applied to.
+        # Sentences are nested, we unbox them by taking first and last parantheses
+        processed_sentences = []
+        for sentence_content in sentences_content:
+            first_parantheses = sentence_content.find('(')
+            last_parantheses = sentence_content.rfind(')')
+            processed_sentences.append(self.process_sentence(sentence_content[first_parantheses + 1:
+                                                                              last_parantheses],
+                                                             agent_index, day, talk_number, described_day))
 
-def parse_sentence_with_logic(sentence, agent_index=None):
-    """
-    Parse a sentence that contains a logic operator, this is sometimes paired with a subject
-    and sometimes without it
-    :param sentence:
-    :param agent_index
-    :return:
-    """
-    first_sentences_idx = sentence.find('(')
-    prefix = sentence[:first_sentences_idx]
-    sentences_content = [s for s in seperate_sentences(sentence[first_sentences_idx:]) if len(s.replace(' ', '')) != 0]
+        return LogicStatement(subject, operator_type, processed_sentences, day=day, described_day=described_day)
 
-    prefix_parts = prefix.split(' ')
-    if prefix_parts[0] in LOGIC_OPERATORS:
-        subject = agent_index
-        operator_type = SentenceType[prefix_parts[0]]
-    else:
-        subject = extract_agent_idx(prefix_parts[0])
-        operator_type = SentenceType[prefix_parts[1]]
+    def process_sentence(self, sentence, agent_index, day, talk_number, described_day=None):
+        """
+        Given a sentence of a player decide it's type and parse it by creating a matching
+        object (which is defined above using named tuples).
+        :param sentence: Sentence that will be parsed.
+        :param agent_index: Index of the agent that said this sentence.
+        :param day Day of the message, if it's stated.
+        :param talk_number The talk number of this message, idx in the pandas dataframe.
+        :param described_day Day stated in the message (for example, on Day 1 agent x said ...).
+        :return: Object representing this sentence.
+        """
+        print("PROCESSING SENTENCE: " + sentence)
+        result = None
+        if any(logic_operator in sentence for logic_operator in LOGIC_OPERATORS):
+            result = self.parse_sentence_with_logic(sentence, agent_index, day, talk_number, described_day)
+        elif "DAY" in sentence:
+            result = self.parse_with_time_info(sentence, agent_index, day, talk_number)
+        elif "REQUEST" in sentence:
+            result = MessageParser.parse_request(sentence, agent_index,
+                                                 lambda subject, target, content: Request(subject, target,
+                                                                                          self.process_sentence(
+                                                                                              content.replace(')', ''),
+                                                                                              subject, day,
+                                                                                              talk_number,
+                                                                                              described_day),
+                                                                                          SentenceType.REQUEST))
+        elif "INQUIRE" in sentence:
+            result = MessageParser.parse_request(sentence, agent_index,
+                                                 lambda subject, target, content: Inquire(subject, target,
+                                                                                          self.process_sentence(
+                                                                                              content.replace(')', ''),
+                                                                                              subject, day,
+                                                                                              talk_number,
+                                                                                              described_day),
+                                                                                          SentenceType.INQUIRE))
+        elif "ESTIMATE" in sentence or "COMINGOUT" in sentence:
+            result = MessageParser.parse_knowledge_sentence(sentence, agent_index, day, described_day)
+        elif "AGREE" in sentence or "DISAGREE" in sentence:
+            self.parse_opinion(sentence, agent_index, day, described_day)
+        elif any(action in sentence for action in AVAILABLE_ACTIONS):
+            result = MessageParser.parse_action_sentence(sentence, agent_index, day, described_day)
+        elif any(action_result in sentence for action_result in AVAILABLE_ACTION_RESULTS):
+            result = MessageParser.parse_past_action_sentence(sentence, agent_index, day, described_day)
 
-    # Parse the other sentences for which the logic is applied to.
-    # Sentences are nested, we unbox them by taking first and last parantheses
-    processed_sentences = []
-    for sentence_content in sentences_content:
-        first_parantheses = sentence_content.find('(')
-        last_parantheses = sentence_content.rfind(')')
-        processed_sentences.append(process_sentence(sentence_content[first_parantheses + 1:
-                                                                     last_parantheses],
-                                                    agent_index))
+        self._talk_number_to_message[talk_number] = result
+        return result
 
-    return LogicStatement(subject, operator_type, processed_sentences)
+    def parse_opinion(self, sentence, agent_idx, day, described_day):
+        """
+        Parse a sentence where the agent states it's opinion regarding a specific sentence.
+        Recall the sentence using our saved dictionary of messages and return an
+        Opinion object.
+        :param sentence:
+        :param agent_idx:
+        :param day:
+        :param described_day:
+        :return:
+        """
+        splitted_sentence = sentence.split(' ')
 
+        if len(splitted_sentence) == 2:
+            subject = agent_idx
+            opinion_type = SentenceType[splitted_sentence[0]]
+            talk_number = int(splitted_sentence[1])
+        else:
+            subject = extract_agent_idx(splitted_sentence[0])
+            opinion_type = SentenceType[splitted_sentence[1]]
+            talk_number = int(splitted_sentence[2])
 
-def process_sentence(sentence, agent_index=None, day=None):
-    """
-    Given a sentence of a player decide it's type and parse it by creating a matching
-    object (which is defined above using named tuples).
-    :param sentence: Sentence that will be parsed.
-    :param agent_index: Index of the agent that said this sentence.
-    :param day Day of the message, if it's stated.
-    :return: Object representing this sentence.
-    """
-    print("PROCESSING SENTENCE: " + sentence)
-    result = None
-    if any(logic_operator in sentence for logic_operator in LOGIC_OPERATORS):
-        result = parse_sentence_with_logic(sentence, agent_index)
-    elif "DAY" in sentence:
-        result = parse_with_time_info(sentence, agent_index)
-    elif "REQUEST" in sentence:
-        result = parse_request(sentence, agent_index,
-                               lambda subject, target, content: Request(subject, target,
-                                                                        process_sentence(content.replace(')', ''),
-                                                                                         subject),
-                                                                        SentenceType.REQUEST))
-    elif "INQUIRE" in sentence:
-        result = parse_request(sentence, agent_index,
-                               lambda subject, target, content: Inquire(subject, target,
-                                                                        process_sentence(content.replace(')', '', ),
-                                                                                         subject),
-                                                                        SentenceType.INQUIRE))
-    elif "ESTIMATE" in sentence:
-        result = parse_knowledge_sentence(sentence, agent_index)
-    elif "COMINGOUT" in sentence:
-        result = parse_knowledge_sentence(sentence, agent_index)
-    elif "AGREE" in sentence:
-        pass
-    elif any(action in sentence for action in AVAILABLE_ACTIONS):
-        result = parse_action_sentence(sentence, agent_index, day)
-    elif any(action_result in sentence for action_result in AVAILABLE_ACTION_RESULTS):
-        result = parse_past_action_sentence(sentence, day)
+        return Opinion(subject, talk_number, opinion_type, self._talk_number_to_message[talk_number], day,
+                       described_day)
 
-    return result
+    @staticmethod
+    def parse_request(sentence, agent_idx, object_builder):
+        """
+        Process a request sent from a player.
+        In the case of a missing subject in the sentence representing the request (UNSPEC) we will take the subject
+        to be the subject of the parent sentence if the request is nested inside a sentence. If the request is not nested
+        the subject will be the speaker.
+        :param sentence:
+        :param agent_idx:
+        :param object_builder:
+        :return:
+        """
+        request, content = sentence.split('(', 1)
+        request_parts = [part for part in request.replace('(', '').split(' ') if len(part) != 0]
 
+        if len(request_parts) == 2:
+            subject = agent_idx
+            target = extract_agent_idx(request_parts[1])
+        else:
+            subject = extract_agent_idx(request_parts[0])
+            target = extract_agent_idx(request_parts[2])
 
-def parse_request(sentence, agent_idx, object_builder):
-    """
-    Process a request sent from a player.
-    In the case of a missing subject in the sentence representing the request (UNSPEC) we will take the subject
-    to be the subject of the parent sentence if the request is nested inside a sentence. If the request is not nested
-    the subject will be the speaker.
-    :param sentence:
-    :param agent_idx:
-    :param object_builder:
-    :return:
-    """
-    request, content = sentence.split('(', 1)
-    request_parts = [part for part in request.replace('(', '').split(' ') if len(part) != 0]
+        if not ("REQUEST" in request_parts or "INQUIRE" in request_parts):
+            print("ERROR: Cant parse sentence " + sentence + " cause it's not a request")
 
-    if len(request_parts) == 2:
-        subject = agent_idx
-        target = extract_agent_idx(request_parts[1])
-    else:
-        subject = extract_agent_idx(request_parts[0])
-        target = extract_agent_idx(request_parts[2])
+        return object_builder(subject, target, content)
 
-    if not ("REQUEST" in request_parts or "INQUIRE" in request_parts):
-        print("ERROR: Cant parse sentence " + sentence + " cause it's not a request")
+    @staticmethod
+    def parse_knowledge_sentence(sentence, agent_index, day, described_day):
+        """
+        Return a Knowledge object based on the given sentence.
+        :param sentence:  Sentence that represents some knowledge of a given agent.
+        :param agent_index
+        :param day
+        :param described_day
+        :return: Knowledge object.
+        """
+        parts_of_sentence = sentence.split(' ')
+        if not (len(parts_of_sentence) == 4 or len(parts_of_sentence) == 3):
+            print("Invalid number of words in sentence: " + sentence)
 
-    return object_builder(subject, target, content)
+        if len(parts_of_sentence) == 3:
+            subject = agent_index
+            knowledge_type = SentenceType[parts_of_sentence[0]]
+            target = extract_agent_idx(parts_of_sentence[1])
+            role = parts_of_sentence[2]
+        else:
+            subject = extract_agent_idx(parts_of_sentence[0])
+            knowledge_type = SentenceType[parts_of_sentence[1]]
+            target = extract_agent_idx(parts_of_sentence[2])
+            role = parts_of_sentence[3]
 
+        return Knowledge(subject, target, role, knowledge_type, day=day, described_day=described_day)
 
-def parse_knowledge_sentence(sentence, agent_index):
-    """
-    Return a Knowledge object based on the given sentence.
-    :param sentence:  Sentence that represents some knowledge of a given agent.
-    :param agent_index
-    :return: Knowledge object.
-    """
-    parts_of_sentence = sentence.split(' ')
-    if not (len(parts_of_sentence) == 4 or len(parts_of_sentence) == 3):
-        print("Invalid number of words in sentence: " + sentence)
+    @staticmethod
+    def parse_past_action_sentence(sentence, agent_index, day, described_day):
+        """
+        Parse sentence that shows the result of past actions.
+        :param sentence: Sentence that will be parsed.
+        :param agent_index
+        :param day
+        :param described_day
+        :return: ActionResult object.
+        """
+        parts_of_sentence = sentence.split(' ')
+        if not (len(parts_of_sentence) == 3 or len(parts_of_sentence) == 4):
+            print("ERROR: Invalid number of words in sentence:  " + sentence)
 
-    if len(parts_of_sentence) == 3:
-        subject = agent_index
-        knowledge_type = SentenceType[parts_of_sentence[0]]
-        target = extract_agent_idx(parts_of_sentence[1])
-        role = parts_of_sentence[2]
-    else:
-        subject = extract_agent_idx(parts_of_sentence[0])
-        knowledge_type = SentenceType[parts_of_sentence[1]]
-        target = extract_agent_idx(parts_of_sentence[2])
-        role = parts_of_sentence[3]
-
-    return Knowledge(subject, target, role, knowledge_type)
-
-
-def parse_past_action_sentence(sentence, agent_index=None, day=None):
-    """
-    Parse sentence that shows the result of past actions.
-    :param sentence: Sentence that will be parsed.
-    :param agent_index
-    :param day
-    :return: ActionResult object.
-    """
-    parts_of_sentence = sentence.split(' ')
-    if not (len(parts_of_sentence) == 3 or len(parts_of_sentence) == 4):
-        print("ERROR: Invalid number of words in sentence:  " + sentence)
-
-    species = None
-    if len(parts_of_sentence) == 3:
-        if parts_of_sentence[0] not in AVAILABLE_ACTION_RESULTS:
+        species = None
+        if len(parts_of_sentence) == 3:
+            if parts_of_sentence[0] not in AVAILABLE_ACTION_RESULTS:
+                subject = extract_agent_idx(parts_of_sentence[0])
+                action_type = parts_of_sentence[1]
+                target = extract_agent_idx(parts_of_sentence[2])
+            else:
+                subject = agent_index
+                action_type = parts_of_sentence[0]
+                target = extract_agent_idx(parts_of_sentence[1])
+                species = parts_of_sentence[2]
+        else:
             subject = extract_agent_idx(parts_of_sentence[0])
             action_type = parts_of_sentence[1]
             target = extract_agent_idx(parts_of_sentence[2])
-        else:
+            species = parts_of_sentence[3]
+        return ActionResult(subject, target, species, action_type, day=day, described_day=described_day)
+
+    def parse_with_time_info(self, sentence, agent_index, day, talk_number):
+        """
+        Parse sentence that is paired with time info - what day was it.
+        :param sentence:
+        :param agent_index:
+        :param talk_number
+        :return:
+        """
+        day_num, content = sentence.split('(', 1)
+        described_day = int(day_num.split(' ')[1])
+        return self.process_sentence(content.replace(')', ''), agent_index, day, talk_number,
+                                     described_day=described_day)
+
+    @staticmethod
+    def parse_action_sentence(sentence, agent_index, day, described_day):
+        """
+        Parse sentence that represents an action done by an agent.
+        :param sentence: Sentence that will be parsed.
+        :param agent_index
+        :param day
+        :param described_day
+        :return: Action object.
+        """
+        parts_of_sentence = sentence.split(' ')
+        if not (len(parts_of_sentence) == 2 or len(parts_of_sentence) == 3):
+            print("ERROR: Invalid number of words in sentence:  " + sentence)
+
+        if len(parts_of_sentence) == 2:
             subject = agent_index
-            action_type = parts_of_sentence[0]
+            action_result_type = SentenceType[parts_of_sentence[0]]
             target = extract_agent_idx(parts_of_sentence[1])
-            species = parts_of_sentence[2]
-    else:
-        subject = extract_agent_idx(parts_of_sentence[0])
-        action_type = parts_of_sentence[1]
-        target = extract_agent_idx(parts_of_sentence[2])
-        species = parts_of_sentence[3]
-    return ActionResult(subject, target, species, action_type, day)
+        else:
+            subject = extract_agent_idx(parts_of_sentence[0])
+            action_result_type = SentenceType[parts_of_sentence[1]]
+            target = extract_agent_idx(parts_of_sentence[2])
 
-
-def parse_with_time_info(sentence, agent_index):
-    """
-    Parse sentence that is paired with time info - what day was it.
-    :param sentence:
-    :param agent_index:
-    :return:
-    """
-    day, content = sentence.split('(', 1)
-    day_num = day.split(' ')[1]
-    return process_sentence(content.replace(')', ''), agent_index, day_num)
-
-
-def parse_action_sentence(sentence, agent_index, day=None):
-    """
-    Parse sentence that represents an action done by an agent.
-    :param sentence: Sentence that will be parsed.
-    :param agent_index
-    :param day
-    :return: Action object.
-    """
-    parts_of_sentence = sentence.split(' ')
-    if not (len(parts_of_sentence) == 2 or len(parts_of_sentence) == 3):
-        print("ERROR: Invalid number of words in sentence:  " + sentence)
-
-    if len(parts_of_sentence) == 2:
-        subject = agent_index
-        action_result_type = SentenceType[parts_of_sentence[0]]
-        target = extract_agent_idx(parts_of_sentence[1])
-    else:
-        subject = extract_agent_idx(parts_of_sentence[0])
-        action_result_type = SentenceType[parts_of_sentence[1]]
-        target = extract_agent_idx(parts_of_sentence[2])
-
-    return Action(subject, target, action_result_type, day)
+        return Action(subject, target, action_result_type, day=day, described_day=described_day)
 
 
 if __name__ == "__main__":
@@ -343,5 +357,7 @@ if __name__ == "__main__":
     test2 = "BECAUSE (DAY 2 (Agent[10] DIVINED Agent[06] WEREWOLF)) (REQUEST ANY (VOTE Agent[06]))"
     test3 = "REQUEST ANY (VOTE Agent[06])"
     test4 = "BECAUSE (AND (COMINGOUT Agent[04] VILLAGER) (DAY 3 (Agent[10] DIVINED Agent[04] WEREWOLF))) (XOR (ESTIMATE Agent[10] WEREWOLF) (ESTIMATE Agent[10] POSSESSED))"
-    res = process_sentence(test4, agent_index=2)
+    test5 = "DAY 1 (Agent[11] DIVINED Agent[10] WEREWOLF)"
+    parser = MessageParser()
+    res = parser.process_sentence(test5, agent_index=2, day=3, talk_number=4)
     print(res)

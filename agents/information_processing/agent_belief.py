@@ -5,35 +5,6 @@ from enum import Enum
 UNUSEFUL_SENTENCES = ['Skip', 'Over']
 
 
-class GameRoles(Enum):
-    VILLAGER = 1,
-    WEREWOLF = 2,
-    SEER = 3,
-    BODYGUARD = 4,
-    POSSESSED = 5,
-    MEDIUM = 6
-
-
-class MessageType(Enum):
-    """
-    All the different message types we can receive from the server.
-    TALK - Sentence has been sent by the agent.
-    VOTE - The agent has given the following vote.
-    EXECUTE - The agent has been executed (based on the votes).
-    DEAD - The agent has been killed by the werewolves during the night.
-    ATTACK_VOTE - The agent is a werewolf cooperator of ours (we will see this message only when we are in
-    the werewolves group).
-    FINISH - This is when the all players reveal their real identities.
-    """
-    TALK = 1,
-    VOTE = 2,
-    EXECUTE = 3,
-    DEAD = 4,
-    ATTACK_VOTE = 5,
-    WHISPER = 6,
-    FINISH = 7,
-
-
 class AgentBelief(object):
     """
     This class will hold our belief of the intentions and goals of the agent
@@ -130,7 +101,7 @@ class AgentBelief(object):
         print("MESSAGE TYPE: ", message_type)
         parsed_sentence = agent_sentence
         if agent_sentence not in UNUSEFUL_SENTENCES:
-            parsed_sentence = process_sentence(agent_sentence, self._index)
+            parsed_sentence = process_sentence(agent_sentence, self._index, day=day)
 
         if message_type == MessageType.TALK:
             if agent_sentence not in UNUSEFUL_SENTENCES:
@@ -206,8 +177,6 @@ class AgentBelief(object):
         :return:
         """
         self._agent_actions[talk_number] = action
-
-
 
     def add_new_action_result(self, action_result, talk_number):
         if action_result.type == SentenceType.VOTED:
