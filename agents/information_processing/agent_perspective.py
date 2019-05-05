@@ -3,6 +3,7 @@ import random
 from enum import Enum
 from collections import namedtuple
 from math import pow
+from .processed_sentence import ProcessedSentence
 
 
 class AgentStatus(Enum):
@@ -11,7 +12,7 @@ class AgentStatus(Enum):
     DEAD_WEREWOLVES = 3
 
 
-HOSTILITY_DISCOUNT_FACOTR = 0.9
+HOSTILITY_DISCOUNT_FACTOR = 0.9
 
 FONDNESS_DISCOUNT_FACTOR = 0.9
 
@@ -61,7 +62,7 @@ class Enemy(object):
             for day, message_hostilities in self._hostility_history.items():
                 distance = current_day - day
                 for message_hostility in message_hostilities:
-                    self._total_hostility += pow(HOSTILITY_DISCOUNT_FACOTR, distance) * message_hostility.hostility
+                    self._total_hostility += pow(HOSTILITY_DISCOUNT_FACTOR, distance) * message_hostility.hostility
             self._was_updated = False
             return self._total_hostility
 
@@ -152,7 +153,7 @@ class AgentPerspective(object):
     werewolves.
     """
 
-    def __init__(self, agent_idx, my_idx, role=None):
+    def __init__(self, agent_idx, my_idx, sentences_container, role=None):
         """
         :param agent_idx: Index of this agent.
         :param my_idx: Index of our agent.
@@ -169,6 +170,7 @@ class AgentPerspective(object):
 
         # Messages ordered by day that are directed to me (think these are only inquire and request messages).
         self.messages_to_me = {}
+        self._sentences_container = sentences_container
 
     def update_status(self, status):
         self._status = status
@@ -185,6 +187,7 @@ class AgentPerspective(object):
         return self.messages_to_me[day]
 
     def update_non_cooperator(self, message, hostility=1):
+        processed = ProcessedSentence(message, hostility, True)
         if hostility < 0:
             return self.update_cooperator(message, fondness=-hostility)
         non_cooperator = Enemy(message.target)
@@ -199,8 +202,10 @@ class AgentPerspective(object):
             else:
                 # Update the hostility.
                 self._noncooperators[message.target].update_hostility(hostility, message)
+        return [processed]
 
     def update_cooperator(self, message, fondness=1):
+        processed = ProcessedSentence(message, fondness, False)
         if fondness < 0:
             self.update_non_cooperator(message, hostility=-fondness)
         cooperator = Cooperator(message.target)
@@ -213,6 +218,7 @@ class AgentPerspective(object):
                 self._cooperators[message.target] = cooperator
             else:
                 self._cooperators[message.target].update_fondness(message)
+        return [processed]
 
     def switch_sides(self, day):
         """
@@ -242,6 +248,7 @@ class AgentPerspective(object):
         :return:
         """
         self._admitted_role = {"role": message.role, "reason": message}
+        return ProcessedSentence.empty_sentence(message)
 
     def add_message_directed_to_me(self, message):
         if message.day in self.messages_to_me.keys():
@@ -249,7 +256,7 @@ class AgentPerspective(object):
         else:
             self.messages_to_me[message.day] = [message]
 
-    def update_based_on_request(self, message):
+    def update_based_on_request(self, message, talk_number):
         """
         Update the perspective of this agent based on the given request.
         There are a lot of ways we can interpret a given request:
@@ -260,6 +267,7 @@ class AgentPerspective(object):
         though attack is only necessary for werewolves in the night phase).
         For each message give an increased hostility if it is hostile and the request is from everybody (ANY).
         :param message:
+        :param talk_number
         :return:
         """
         content = message.content
@@ -269,69 +277,98 @@ class AgentPerspective(object):
         if content.type == SentenceType.ESTIMATE or content.type == SentenceType.COMINGOUT:
             if GameRoles[content.role] == GameRoles.WEREWOLF or GameRoles[content.role] == GameRoles.POSSESSED:
                 hostility = 2 if message.target == "ANY" else 1
-                self.update_non_cooperator(content, hostility=hostility)
+                result = self.update_non_cooperator(content, hostility=hostility)
             else:
                 fondness = 3 if message.target == "ANY" else 1
-                self.update_cooperator(content, fondness= fondness)
+                result = self.update_cooperator(content, fondness=fondness)
 
         elif content.type == SentenceType.AGREE or content.type == SentenceType.DISAGREE:
             scale = 4 if message.target == "ANY" else 2
-            self.update_based_on_opinion(content, scale=scale)
+            result = self.update_based_on_opinion(content, scale=scale)
         elif content.type == SentenceType.VOTE:
             hostility = 4 if message.target == "ANY" else 1.5
-            self.update_non_cooperator(content, hostility=hostility)
+            result = self.update_non_cooperator(content, hostility=hostility)
         elif content.type == SentenceType.DIVINE:
             hostility = 0.5 if message.target == "ANY" else 0.25
-            self.update_non_cooperator(content, hostility=hostility)
+            result = self.update_non_cooperator(content, hostility=hostility)
         elif content.type == SentenceType.GUARD:
             fondness = 3 if message.target == "ANY" else 1
-            self.update_cooperator(message, fondness)
+            result = self.update_cooperator(message, fondness)
         elif content.type == SentenceType.XOR:
-            self.update_based_on_xor(message)
+            result = self.update_based_on_xor(message)
         elif content.type == SentenceType.OR:
-            self.update_based_on_or(message)
+            result = self.update_based_on_or(message)
         elif content.type == SentenceType.ATTACK or content.type == SentenceType.IDENTIFIED:
             # TODO - Unsure if it's needed only used between werewolves, it's obvious they are cooperators.
             pass
+        return result
 
-    def update_based_on_or(self, message):
+    def update_based_on_or(self, message, talk_number):
         """
         Update based on given or message, current naive implementation updates based on each sentence with lower scale
         of fondness or hostility.
         TODO - Look at the most likely sentence based on my agent's perspective and scale the hostility or fondness
         based on the probabilities that my agent gives to one of these events happening based on his perspective.
         :param message:
+        :param talk_number
         :return:
         """
         scale = len(message.sentences)
+        result = None
         for sentence in message.sentences:
-            self.update_perspective(sentence, scale=scale)
+            self.update_perspective(sentence, talk_number, scale=scale)
+        return result
 
-    def update_based_on_xor(self, message):
+    def update_based_on_xor(self, message, talk_number):
         """
         Currently a xor message will be processed as two separate messages with lower scale for fondness or
         hostility of these messages because only one of them is true.
         TODO- We would maybe like to check resolvement of xor messages.
         :param message:
+        :param talk_number
         :return:
         """
-        self.update_based_on_or(message)
+        return self.update_based_on_or(message)
 
-    def update_based_on_opinion(self, message, scale=2):
+    def reprocess_sentences(self, sentences, in_hostility, in_fondness):
+        """
+        Reprocess sentences that were already processed.
+        :param sentences:
+        :param in_hostility: Method that will be used to update hostility depends on whether our opinion shows
+        agreement or disagreement.
+        :param in_fondness: Method that will be used to update fondness depends on whether our opinion shows
+        agreement or disagreement.
+        :return:
+        """
+        for sentence in sentences:
+            if sentence.is_hostile:
+                in_hostility(sentence.sentence, sentence.amount)
+            else:
+                in_fondness(sentence.sentence, sentence.amount)
+
+    def update_based_on_opinion(self, message, talk_number, scale=2):
         """
         Update the hostility or fondness of an agent based on a given opinion.
         TODO- There is more to it than AGREE= Like and Disagree=Dislike.
         :param message:
+        :param talk_number
         :param scale: Controls the amount of hostility or fondness, if an agent requests from everybody to agree
         with the statement of the other agent it means that he supports him much highly then a single agreement.
         :return:
         """
         if message.type == SentenceType.AGREE:
-            self.update_cooperator(message.referencedSentence, fondness=scale)
+            result = self.update_cooperator(message.referencedSentence, fondness=scale)
+            in_hostility = self.update_non_cooperator
+            in_fondness = self.update_cooperator
         elif message.type == SentenceType.DISAGREE:
-            self.update_non_cooperator(message.referencedSentence, hostility=scale)
+            result = self.update_non_cooperator(message.referencedSentence, hostility=scale)
+            in_hostility = self.update_cooperator
+            in_fondness = self.update_non_cooperator
+        processed_sentences = self._sentences_container.get_sentence(talk_number)
+        self.reprocess_sentences(processed_sentences, in_hostility, in_fondness)
+        return result
 
-    def update_because_sentence(self, message, scale=1):
+    def update_because_sentence(self, message, talk_number, scale=1):
         """
         Given a because sentence update the cooperators and enemies of this agent.
         Examples of because sentences that shows non cooperation:
@@ -340,39 +377,42 @@ class AgentPerspective(object):
         Examples for because sentences that show cooperation/
         1. Because that x happened I request anyone to guard agent 1 because he is valuable to the team.
         :param message:
+        :param talk_number
         :param scale
         :return:
         """
         cause, effect = message.sentences
         effect._replace(reason=cause)
+        result = None
 
         if effect.type == SentenceType.VOTE:
-            self.update_non_cooperator(effect, hostility=3 / scale)
+            result = self.update_non_cooperator(effect, hostility=3 / scale)
         elif effect.type == SentenceType.DIVINE:
-            self.update_non_cooperator(effect, hostility=1 / scale)
+            result = self.update_non_cooperator(effect, hostility=1 / scale)
         elif effect.type == SentenceType.GUARD:
-            self.update_cooperator(effect, fondness=1 / scale)
+            result = self.update_cooperator(effect, fondness=1 / scale)
         elif effect.type == SentenceType.AGREE or effect.type == SentenceType.DISAGREE:
-            self.update_based_on_opinion(effect, scale=3)
+            result = self.update_based_on_opinion(effect, talk_number, scale=3)
         elif effect.type == SentenceType.ESTIMATE or effect.type == SentenceType.COMINGOUT:
             if GameRoles[effect.role] == GameRoles.WEREWOLF or GameRoles[effect.role] == GameRoles.POSSESSED:
-                self.update_non_cooperator(effect, hostility=2 / scale)
+                result = self.update_non_cooperator(effect, hostility=2 / scale)
             else:
                 # If we estimate someone to not be in the werewolf team there is some fondness to it.
-                self.update_cooperator(effect, fondness=1 / scale)
+                result = self.update_cooperator(effect, fondness=1 / scale)
         elif effect.type == SentenceType.REQUEST:
-            self.update_based_on_request(effect)
+            result = self.update_based_on_request(effect, talk_number)
         elif effect.type == SentenceType.INQUIRE:
-            self.update_based_on_inquire(effect)
+            result = self.update_based_on_inquire(effect)
         elif effect.type == SentenceType.XOR:
-            self.update_based_on_xor(message)
+            result = self.update_based_on_xor(message, talk_number)
         elif effect.type == SentenceType.OR:
-            self.update_based_on_or(effect)
+            result = self.update_based_on_or(effect, talk_number)
         elif effect.type == SentenceType.AND:
             # Process all sentences.
             for sentence in effect.sentences:
                 sentence._replace(reason=cause)
-                self.update_perspective(sentence)
+                self.update_perspective(sentence, talk_number)
+        return result
 
     def update_based_on_inquire(self, message):
         """
@@ -384,37 +424,46 @@ class AgentPerspective(object):
         # Save inquires that are directed to our agent. Maybe we will answer.
         if message.target == self.my_agent:
             self.add_message_directed_to_me(message)
+        return ProcessedSentence.empty_sentence(message)
 
-    def update_perspective(self, message, scale=1):
+    def update_perspective(self, message, talk_number, scale=1):
         """
         Given a new message update my perspective.
         :param message:
+        :param talk_number
         :param scale Will be higher for sentences that are less likely to be true (for example if this part
         of an or/xor statement or this agent is an avid liar).
         :return:
         """
+        # result = self.process_message(message, scale)
+        # self._sentences_container.add_message(talk_number, message)
         if message.type == SentenceType.ESTIMATE or message.type == SentenceType.COMINGOUT:
             if message.target == self._index:
-                self.update_admitted_role(message)
+                result = self.update_admitted_role(message)
             elif GameRoles[message.role] == GameRoles.WEREWOLF or GameRoles[message.role] == GameRoles.POSSESSED:
-                self.update_non_cooperator(message, hostility=1 / scale)
+                result = self.update_non_cooperator(message, hostility=1 / scale)
 
         elif message.type == SentenceType.VOTE:
-            self.update_non_cooperator(message, hostility=1.5 / scale)
+            result = self.update_non_cooperator(message, hostility=1.5 / scale)
         elif message.type == SentenceType.REQUEST:
-            self.update_based_on_request(message)
+            result = self.update_based_on_request(message)
         elif message.type == SentenceType.INQUIRE:
-            self.update_based_on_inquire(message)
+            result = self.update_based_on_inquire(message)
         elif message.type == SentenceType.BECAUSE:
-            self.update_because_sentence(message)
+            result = self.update_because_sentence(message)
         elif message.type == SentenceType.AGREE or message.type == SentenceType.DISAGREE:
-            self.update_based_on_opinion(message)
+            result = self.update_based_on_opinion(message)
         elif message.type == SentenceType.XOR:
-            self.update_based_on_xor(message)
+            result = self.update_based_on_xor(message, talk_number)
         elif message.type == SentenceType.OR:
-            self.update_based_on_or(message)
+            result = self.update_based_on_or(message,  talk_number)
 
-    def update_based_on_not(self, message):
+        if result is not None:
+            self._sentences_container.add_sentence(message, talk_number)
+
+
+
+    def update_based_on_not(self, message, talk_number):
         """
         Update based on negation sentence. Go over all the negated sentences and update the perspective using a
         negative scale. That way the sentence will get the exact opposite effect, if the original sentence shows
@@ -423,7 +472,7 @@ class AgentPerspective(object):
         :return:
         """
         for sentence in message.sentences:
-            self.update_perspective(sentence, scale=-1)
+            self.update_perspective(sentence, talk_number, scale=-1)
 
     def update_vote(self, vote):
         """

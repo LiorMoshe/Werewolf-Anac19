@@ -1,5 +1,6 @@
 from .agent_perspective import *
 from .message_parsing import *
+from .sentences_container import SentencesContainer
 
 # These sentences currently, don't help us much (maybe will be used in future dev).
 UNUSEFUL_SENTENCES = ['Skip', 'Over']
@@ -35,9 +36,10 @@ class TownsFolkStrategy(object):
     def __init__(self, agent_indices, my_index, role_map):
         self._perspectives = {}
         self._message_parser = MessageParser()
+        self._sentences_container = SentencesContainer()
         for idx in agent_indices:
-            self._perspectives[idx] = AgentPerspective(idx, my_index, None if idx not in role_map.keys()
-            else role_map[idx])
+            self._perspectives[idx] = AgentPerspective(idx, my_index, self._sentences_container,
+                                                       None if idx not in role_map.keys() else role_map[idx])
 
         # TODO - This is the model that will be implemented.
         self._model = None
@@ -60,7 +62,6 @@ class TownsFolkStrategy(object):
                 if agent_sentence not in UNUSEFUL_SENTENCES:
                     parsed_sentence = self._message_parser.process_sentence(agent_sentence, curr_index, day,
                                                                             talk_number)
-
                 if message_type == MessageType.TALK:
                     if agent_sentence not in UNUSEFUL_SENTENCES:
                         self._perspectives[curr_index].update_perspective(parsed_sentence)
