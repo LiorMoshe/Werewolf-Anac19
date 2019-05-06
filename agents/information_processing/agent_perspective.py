@@ -295,9 +295,9 @@ class AgentPerspective(object):
             fondness = 3 if message.target == "ANY" else 1
             result = self.update_cooperator(message, fondness)
         elif content.type == SentenceType.XOR:
-            result = self.update_based_on_xor(message)
+            result = self.update_based_on_xor(message, talk_number)
         elif content.type == SentenceType.OR:
-            result = self.update_based_on_or(message)
+            result = self.update_based_on_or(message, talk_number)
         elif content.type == SentenceType.ATTACK or content.type == SentenceType.IDENTIFIED:
             # TODO - Unsure if it's needed only used between werewolves, it's obvious they are cooperators.
             pass
@@ -328,7 +328,7 @@ class AgentPerspective(object):
         :param talk_number
         :return:
         """
-        return self.update_based_on_or(message)
+        return self.update_based_on_or(message, talk_number)
 
     def reprocess_sentences(self, sentences, in_hostility, in_fondness):
         """
@@ -435,8 +435,7 @@ class AgentPerspective(object):
         of an or/xor statement or this agent is an avid liar).
         :return:
         """
-        # result = self.process_message(message, scale)
-        # self._sentences_container.add_message(talk_number, message)
+        result = None
         if message.type == SentenceType.ESTIMATE or message.type == SentenceType.COMINGOUT:
             if message.target == self._index:
                 result = self.update_admitted_role(message)
@@ -446,22 +445,20 @@ class AgentPerspective(object):
         elif message.type == SentenceType.VOTE:
             result = self.update_non_cooperator(message, hostility=1.5 / scale)
         elif message.type == SentenceType.REQUEST:
-            result = self.update_based_on_request(message)
+            result = self.update_based_on_request(message, talk_number)
         elif message.type == SentenceType.INQUIRE:
             result = self.update_based_on_inquire(message)
         elif message.type == SentenceType.BECAUSE:
-            result = self.update_because_sentence(message)
+            result = self.update_because_sentence(message, talk_number)
         elif message.type == SentenceType.AGREE or message.type == SentenceType.DISAGREE:
-            result = self.update_based_on_opinion(message)
+            result = self.update_based_on_opinion(message, talk_number)
         elif message.type == SentenceType.XOR:
             result = self.update_based_on_xor(message, talk_number)
         elif message.type == SentenceType.OR:
             result = self.update_based_on_or(message,  talk_number)
 
         if result is not None:
-            self._sentences_container.add_sentence(message, talk_number)
-
-
+            self._sentences_container.add_sentence(talk_number, message)
 
     def update_based_on_not(self, message, talk_number):
         """

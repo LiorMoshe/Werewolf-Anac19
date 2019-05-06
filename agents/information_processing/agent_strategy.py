@@ -64,7 +64,7 @@ class TownsFolkStrategy(object):
                                                                             talk_number)
                 if message_type == MessageType.TALK:
                     if agent_sentence not in UNUSEFUL_SENTENCES:
-                        self._perspectives[curr_index].update_perspective(parsed_sentence)
+                        self._perspectives[curr_index].update_perspective(parsed_sentence, talk_number)
                 elif message_type == MessageType.VOTE:
                     self._perspectives[curr_index].update_vote(parsed_sentence)
                 elif message_type == MessageType.EXECUTE:
