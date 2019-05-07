@@ -4,6 +4,7 @@ from enum import Enum
 from collections import namedtuple
 from math import pow
 from .processed_sentence import ProcessedSentence
+from ..logger import Logger
 
 
 class AgentStatus(Enum):
@@ -35,13 +36,15 @@ class Enemy(object):
     The hostility level will be discounted based on the number of days that have passed since it was last seen.
     """
 
-    def __init__(self, index, history={}):
+    def __init__(self, index, history):
         self.index = index
         self._hostility_history = history
+        Logger.instance.write("Created new Enemy " + str(self.index) + "  initial history: " + str(self._hostility_history))
         self._total_hostility = 0.0
         self._was_updated = False
 
     def update_hostility(self, hostility, message):
+        Logger.instance.write("Logging hostility for agent: " + str(self.index) + "  current history: " + str(self._hostility_history))
         message_hostility = MessageHostility(message, hostility)
         if message.day in self._hostility_history.keys():
             self._hostility_history[message.day].append(message_hostility)
@@ -83,7 +86,8 @@ class Enemy(object):
         return self.index == other.index
 
     def __str__(self):
-        return "Enemy index: " + str(self.index) + "  total hostility " + str(self._total_hostility)
+        return "Enemy index: " + str(self.index) + "  total hostility " + str(self._total_hostility) + " HISTORY: " + \
+            str(self._hostility_history)
 
 
 class Cooperator(object):
@@ -151,6 +155,7 @@ class AgentPerspective(object):
     Likely Role: The role I think that player has based on what happened thus far.
     Status: Status of the agent, is he alive or dead, if he is dead, who killed him? The townsfolk or the
     werewolves.
+    TODO- If it's easier to be hostile, should everyone start as cooperator.
     """
 
     def __init__(self, agent_idx, my_idx, sentences_container, role=None):
@@ -189,8 +194,9 @@ class AgentPerspective(object):
     def update_non_cooperator(self, message, hostility=1):
         processed = ProcessedSentence(message, hostility, True)
         if hostility < 0:
+            Logger.instance.write("Enemy with index " + str(message.target) + " turned into a cooperator.")
             return self.update_cooperator(message, fondness=-hostility)
-        non_cooperator = Enemy(message.target)
+        non_cooperator = Enemy(message.target, {})
         non_cooperator.update_hostility(hostility, message)
         if message.target in self._cooperators.keys():
             # In a case of a cooperator shown as non cooperator give it a fine in fondness.
@@ -198,9 +204,13 @@ class AgentPerspective(object):
             self._cooperators[message.target].update_fondness(-hostility, message)
         else:
             if message.target not in self._noncooperators.keys():
+                Logger.instance.write("[AGENT " + str(self._index) + "]: Adding a new enemy: " + str(message.target) + \
+                                      " based on message: " + str(message))
                 self._noncooperators[message.target] = non_cooperator
             else:
                 # Update the hostility.
+                Logger.instance.write("[AGENT " + str(self._index) + "]: Updating existing enemy: " + str(message.target)
+                                      + " based on message " + str(message))
                 self._noncooperators[message.target].update_hostility(hostility, message)
         return [processed]
 
@@ -230,14 +240,14 @@ class AgentPerspective(object):
         for index, cooperator in self._cooperators.items():
             total_fondness = self._cooperators[index].get_fondness(day)
             if total_fondness <= 0:
-                print("Agent " + str(index) + " switch sides! Cooperator to enemy.")
+                Logger.instance.write("Agent " + str(index) + " switch sides! Cooperator to enemy.")
                 self._noncooperators[index] = self._cooperators[index].convert_to_enemy()
                 self._cooperators.pop(index, None)
 
         for index, enemy in self._noncooperators.items():
             total_hostility = self._noncooperators[index].get_hostility(day)
             if total_hostility <= 0:
-                print("Agent " + str(index) + " switched sides! Enemy to cooperator.")
+                Logger.instance.write("Agent " + str(index) + " switched sides! Enemy to cooperator.")
                 self._cooperators[index] = self._noncooperators[index].convert_to_cooperator()
                 self._noncooperators.pop(index, None)
 
@@ -251,6 +261,14 @@ class AgentPerspective(object):
         return ProcessedSentence.empty_sentence(message)
 
     def add_message_directed_to_me(self, message):
+        """
+        Save messages such as requests or inquires which are directed towards our agent.
+        In the case of a request the subject requires from the target to act according to the request.
+        In the case of inquire if there is no mention of ANY the subject only wants to know whether the
+        target agrees or not, if there is ANY we expect the target to replace the ANY with his answers.
+        :param message:
+        :return:
+        """
         if message.day in self.messages_to_me.keys():
             self.messages_to_me[message.day].append(message)
         else:
@@ -271,6 +289,11 @@ class AgentPerspective(object):
         :return:
         """
         content = message.content
+
+        if message.target != "ANY":
+            # If there is a request towards someone we will see it as a sign of cooperation.
+            self.update_cooperator(message, fondness=2)
+
         if message.target == self.my_agent:
             self.add_message_directed_to_me(message)
 
@@ -386,7 +409,7 @@ class AgentPerspective(object):
         result = None
 
         if effect.type == SentenceType.VOTE:
-            result = self.update_non_cooperator(effect, hostility=3 / scale)
+            result = self.update_non_cooperator(effect, hostility=2 / scale)
         elif effect.type == SentenceType.DIVINE:
             result = self.update_non_cooperator(effect, hostility=1 / scale)
         elif effect.type == SentenceType.GUARD:
@@ -395,7 +418,7 @@ class AgentPerspective(object):
             result = self.update_based_on_opinion(effect, talk_number, scale=3)
         elif effect.type == SentenceType.ESTIMATE or effect.type == SentenceType.COMINGOUT:
             if GameRoles[effect.role] == GameRoles.WEREWOLF or GameRoles[effect.role] == GameRoles.POSSESSED:
-                result = self.update_non_cooperator(effect, hostility=2 / scale)
+                result = self.update_non_cooperator(effect, hostility=4 / scale)
             else:
                 # If we estimate someone to not be in the werewolf team there is some fondness to it.
                 result = self.update_cooperator(effect, fondness=1 / scale)
@@ -443,6 +466,8 @@ class AgentPerspective(object):
                 result = self.update_non_cooperator(message, hostility=1 / scale)
 
         elif message.type == SentenceType.VOTE:
+            print("Agent Idx: " + str(self._index) + " got vote: " + str(message))
+            Logger.instance.write("Agent Idx: " + str(self._index) + " got vote: " + str(message))
             result = self.update_non_cooperator(message, hostility=1.5 / scale)
         elif message.type == SentenceType.REQUEST:
             result = self.update_based_on_request(message, talk_number)
@@ -466,6 +491,7 @@ class AgentPerspective(object):
         negative scale. That way the sentence will get the exact opposite effect, if the original sentence shows
         hostility negating it will result as a sign of fondness and same vv.
         :param message:
+        :param talk_number
         :return:
         """
         for sentence in message.sentences:
@@ -489,10 +515,10 @@ class AgentPerspective(object):
         self._liar_score += 1
 
     def log_perspective(self):
-        print("Logging perspective of agent: ", self._index)
+        Logger.instance.write("Logging perspective of agent: " + str(self._index))
         for idx, cooperator in self._cooperators.items():
-            print(cooperator)
+            Logger.instance.write(str(cooperator))
 
         for idx, enemy in self._noncooperators.items():
-            print(enemy)
+            Logger.instance.write(str(enemy))
 

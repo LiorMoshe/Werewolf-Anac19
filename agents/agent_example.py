@@ -1,7 +1,7 @@
 import aiwolfpy
 import messages_manager
-from agents.uninformed.seer import Seer
 from agents.agent_container import AgentContainer
+from agents.logger import Logger
 
 """
 Sample of an agent based on the aiwolfpy standards.
@@ -61,5 +61,7 @@ class Werewolf(object):
 
 if __name__=="__main__":
     # Sample code, how to connect to the server.
+    Logger("log.txt")
     my_agent = AgentContainer()
     aiwolfpy.connect_parse(my_agent)
+    Logger.instance.close()
