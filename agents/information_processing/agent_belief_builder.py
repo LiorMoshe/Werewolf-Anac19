@@ -1,6 +1,6 @@
 from .agent_belief import AgentBelief
 
-
+# Deprecated.
 class AgentBeliefBuilder(object):
     """
     This class will be given all the information passed throughout the game

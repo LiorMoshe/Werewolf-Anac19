@@ -4,7 +4,7 @@ from enum import Enum
 # These sentences currently, don't help us much (maybe will be used in future dev).
 UNUSEFUL_SENTENCES = ['Skip', 'Over']
 
-
+# Deprecated.
 class AgentBelief(object):
     """
     This class will hold our belief of the intentions and goals of the agent

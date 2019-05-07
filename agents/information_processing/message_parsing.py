@@ -7,15 +7,6 @@ class Species(Enum):
     WEREWOLVES = 2
 
 
-class GameRoles(Enum):
-    VILLAGER = 1,
-    WEREWOLF = 2,
-    SEER = 3,
-    BODYGUARD = 4,
-    POSSESSED = 5,
-    MEDIUM = 6
-
-
 class SentenceType(Enum):
     ESTIMATE = 1,
     COMINGOUT = 2,

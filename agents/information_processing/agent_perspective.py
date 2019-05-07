@@ -5,6 +5,7 @@ from collections import namedtuple
 from math import pow
 from .processed_sentence import ProcessedSentence
 from ..logger import Logger
+from ..game_roles import GameRoles
 
 
 class AgentStatus(Enum):
@@ -177,11 +178,17 @@ class AgentPerspective(object):
         self.messages_to_me = {}
         self._sentences_container = sentences_container
 
+    def get_index(self):
+        return self._index
+
     def update_status(self, status):
         self._status = status
 
     def update_real_role(self, role):
         self._role = role
+
+    def get_admitted_role(self):
+        return self._admitted_role
 
     def get_messages_to_me(self, day):
         """
@@ -326,7 +333,7 @@ class AgentPerspective(object):
             pass
         return result
 
-    def update_based_on_or(self, message, talk_number):
+    def update_based_on_or(self, message, talk_number, reason=None):
         """
         Update based on given or message, current naive implementation updates based on each sentence with lower scale
         of fondness or hostility.
@@ -339,10 +346,11 @@ class AgentPerspective(object):
         scale = len(message.sentences)
         result = None
         for sentence in message.sentences:
+            sentence._replace(reason=reason)
             self.update_perspective(sentence, talk_number, scale=scale)
         return result
 
-    def update_based_on_xor(self, message, talk_number):
+    def update_based_on_xor(self, message, talk_number, reason=None):
         """
         Currently a xor message will be processed as two separate messages with lower scale for fondness or
         hostility of these messages because only one of them is true.
@@ -351,7 +359,7 @@ class AgentPerspective(object):
         :param talk_number
         :return:
         """
-        return self.update_based_on_or(message, talk_number)
+        return self.update_based_on_or(message, talk_number, reason)
 
     def reprocess_sentences(self, sentences, in_hostility, in_fondness):
         """
@@ -427,15 +435,19 @@ class AgentPerspective(object):
         elif effect.type == SentenceType.INQUIRE:
             result = self.update_based_on_inquire(effect)
         elif effect.type == SentenceType.XOR:
-            result = self.update_based_on_xor(message, talk_number)
+            result = self.update_based_on_xor(message, talk_number, cause)
         elif effect.type == SentenceType.OR:
-            result = self.update_based_on_or(effect, talk_number)
+            result = self.update_based_on_or(effect, talk_number, cause)
         elif effect.type == SentenceType.AND:
-            # Process all sentences.
-            for sentence in effect.sentences:
-                sentence._replace(reason=cause)
-                self.update_perspective(sentence, talk_number)
+            self.update_based_on_and(effect, talk_number, cause)
+
         return result
+
+    def update_based_on_and(self, message, talk_number, reason=None):
+        # Process all sentences.
+        for sentence in message.sentences:
+            sentence._replace(reason=reason)
+            self.update_perspective(sentence, talk_number)
 
     def update_based_on_inquire(self, message):
         """
@@ -481,6 +493,8 @@ class AgentPerspective(object):
             result = self.update_based_on_xor(message, talk_number)
         elif message.type == SentenceType.OR:
             result = self.update_based_on_or(message,  talk_number)
+        elif message.type == SentenceType.NOT:
+            self.update_based_on_not(message, talk_number)
 
         if result is not None:
             self._sentences_container.add_sentence(talk_number, message)
