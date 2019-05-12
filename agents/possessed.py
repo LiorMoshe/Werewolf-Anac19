@@ -1,5 +1,6 @@
 from .uninformed.villager import Villager
 from .informed.werewolf import Werewolf
+from aiwolfpy.contentbuilder import *
 
 
 class Possessed(Villager, Werewolf):
@@ -10,20 +11,14 @@ class Possessed(Villager, Werewolf):
     def getName(self):
         return "Possessed"
 
-    def initialize(self, base_info, diff_data, game_setting):
-        pass
-
-    def dayStart(self):
-        pass
-
     def talk(self):
-        pass
+        return "REQUEST Agent2 (DIVINATION Agent3)"
 
     def whisper(self):
-        pass
+        return ""
 
     def vote(self):
-        pass
+        return "1"
 
     def attack(self):
         pass
@@ -34,8 +29,5 @@ class Possessed(Villager, Werewolf):
     def guard(self):
         pass
 
-    def finish(self):
-        pass
-
-    def update(self, base_info, diff_data, request):
+    def extract_state_info(self, base_info):
         pass

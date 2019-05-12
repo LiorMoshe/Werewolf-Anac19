@@ -4,6 +4,7 @@ import collections
 
 
 class MessageManager(object):
+
     def __init__(self, self_idx, num_agents):
         self.messages = {}
         for agent_idx in range(1,num_agents+1):

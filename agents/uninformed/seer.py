@@ -6,26 +6,26 @@ class Seer(Villager):
     def __init__(self):
         pass
 
-
     def talk(self):
-        pass
-
+        print("Called  TALK")
+        if self._base_info.is_alive(1):
+            return "COMINGOUT Agent[01] WEREWOLF"
+        elif self._base_info.is_alive(2):
+            return "COMINGOUT Agent[02] WEREWOLF"
+        elif self._base_info.is_alive(3):
+            return "COMINGOUT Agent[03x] WEREWOLF"
 
     def whisper(self):
-        pass
-
+        return ""
 
     def vote(self):
-        pass
-
+        return "1"
 
     def attack(self):
         pass
 
-
     def divine(self):
-        pass
-
+        return "1"
 
     def guard(self):
         pass

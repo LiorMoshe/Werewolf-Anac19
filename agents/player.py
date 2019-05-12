@@ -1,5 +1,6 @@
 from abc import *
 from enum import Enum
+from .information_processing.agent_strategy import TownsFolkStrategy
 
 
 class GameSettings(object):
@@ -62,6 +63,12 @@ class GameState(object):
         """
         Initialize the current state of the game based on the json
         received from the server.
+        Contents of game info:
+        Status map: Indicates which player is dead or alive in the game.
+        Remain Talk Map:
+        Remain Whisper Map:
+        Game Role: Which role this player plays in the game.
+        Agent Index: The index of the player in the game.
         :param server_base_info: JSON received from the server representing
         current state of the game.
         """
@@ -72,6 +79,18 @@ class GameState(object):
         self._remain_talk_map = server_base_info['remainTalkMap']
         self._remain_whisper_map = server_base_info['remainWhisperMap']
         self._status_map = server_base_info['statusMap']
+        self.log()
+
+    def is_alive(self, index):
+        return self._status_map[str(index)] == 'ALIVE'
+
+    def log(self):
+        print("Agent index is: " + str(self._agentIndex) + " his role: " + self._role)
+        print("Game role map: ", self._role_map)
+        print("Day in game: ", self._day)
+        print("Remain Talk Map: ", self._remain_talk_map)
+        print("Remain Whisper Map: ", self._remain_whisper_map)
+        print("Status map: ", self._status_map)
 
 
 class Player(ABC):
@@ -87,6 +106,7 @@ class Player(ABC):
         self._game_settings = None
         self._base_info = None
         self._phase = GamePhase.DAY
+        self._strategy = None
 
     @property
     def game_settings(self):
@@ -140,6 +160,12 @@ class Player(ABC):
         self._game_settings = GameSettings(game_setting)
         self._base_info = GameState(base_info)
 
+        # Initialize the agent belief builder.
+        self._strategy = TownsFolkStrategy([i for i in range(1, self._game_settings._player_num)
+                                            if i != self._base_info._agentIndex],
+                                           self._base_info._agentIndex,
+                                           self._base_info._role_map)
+
     def dayStart(self):
         self._phase = GamePhase.DAY
 
@@ -171,7 +197,13 @@ class Player(ABC):
         pass
 
     def update(self, base_info, diff_data, request):
-        request = Request[request]
-        self.extract_state_info()
+        print("Request type: ", request)
+        print("Received game diff:")
+        print(diff_data.to_string())
+        if request == "WHISPER":
+            print("Base info: ", base_info)
+
+        self._strategy.update(diff_data)
+        self.extract_state_info(base_info)
 
 

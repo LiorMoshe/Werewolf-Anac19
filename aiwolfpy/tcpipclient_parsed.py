@@ -17,8 +17,8 @@ from .gameinfoparser import GameInfoParser
 def connect_parse(agent):
     # parse Args
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument('-p', type=int, action='store', dest='port')
-    parser.add_argument('-h', type=str, action='store', dest='hostname')
+    parser.add_argument('-p', type=int, action='store', dest='port', default=10000)
+    parser.add_argument('-h', type=str, action='store', dest='hostname', default="127.0.0.1")
     parser.add_argument('-r', type=str, action='store', dest='role', default='none')
     input_args = parser.parse_args()
     aiwolf_host = input_args.hostname
