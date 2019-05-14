@@ -1,4 +1,4 @@
-from ..game_roles import *
+from agents.game_roles import *
 
 
 class Lie(object):

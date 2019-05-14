@@ -1,4 +1,4 @@
-from .villager import Villager
+from agents.uninformed.villager import Villager
 
 
 class Seer(Villager):

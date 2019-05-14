@@ -1,9 +1,10 @@
-from .uninformed.villager import Villager
-from .uninformed.seer import Seer
-from .uninformed.bodyguard import Bodyguard
-from .uninformed.medium import Medium
-from .informed.werewolf import Werewolf
-from .possessed import Possessed
+from agents.uninformed.villager import Villager
+from agents.uninformed.seer import Seer
+from agents.uninformed.bodyguard import Bodyguard
+from agents.uninformed.medium import Medium
+from agents.informed.werewolf import Werewolf
+from agents.possessed import Possessed
+from agents.logger import Logger
 
 NO_ROLE = 'none'
 
@@ -30,14 +31,15 @@ class AgentContainer(object):
         :param game_setting: The game settings.
         :return:
         """
-        if self._role == NO_ROLE:
-            self._role = base_info['myRole']
+        self._role = base_info['myRole']
 
         if self._role == 'VILLAGER':
             self._agent = Villager()
         elif self._role == 'WEREWOLF':
             self._agent = Werewolf()
         elif self._role == 'SEER':
+            print("IM A SEER")
+            Logger.instance.write("IM A SEER")
             self._agent = Seer()
         elif self._role == 'BODYGUARD':
             self._agent = Bodyguard()

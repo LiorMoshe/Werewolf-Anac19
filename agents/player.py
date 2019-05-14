@@ -1,6 +1,6 @@
 from abc import *
 from enum import Enum
-from .information_processing.agent_strategy import TownsFolkStrategy
+from agents.information_processing.agent_strategy import TownsFolkStrategy
 
 
 class GameSettings(object):
