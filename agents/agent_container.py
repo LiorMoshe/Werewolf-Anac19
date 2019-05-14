@@ -38,8 +38,6 @@ class AgentContainer(object):
         elif self._role == 'WEREWOLF':
             self._agent = Werewolf()
         elif self._role == 'SEER':
-            print("IM A SEER")
-            Logger.instance.write("IM A SEER")
             self._agent = Seer()
         elif self._role == 'BODYGUARD':
             self._agent = Bodyguard()
