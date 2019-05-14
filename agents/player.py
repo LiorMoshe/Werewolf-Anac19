@@ -201,12 +201,7 @@ class Player(ABC):
 
     @abstractmethod
     def vote(self):
-        epsilon = 0 if len(self.tasks) == 0 else 0.3
-        vote_type = np.random.choice([RAND_VOTE, REG_VOTE],p=[epsilon,1-epsilon])
-        if vote_type == RAND_VOTE:
-            return self.rand_vote()
-        elif vote_type == REG_VOTE:
-            return self.get_best_vote_opt()
+        pass
 
     @abstractmethod
     def attack(self):
@@ -232,6 +227,18 @@ class Player(ABC):
 
         self._strategy.update(diff_data)
         self.extract_state_info(base_info)
+
+    def reg_vote(self):
+        '''
+        note under vote function until fully tested
+        :return:
+        '''
+        epsilon = 0 if len(self.tasks) == 0 else 0.3
+        vote_type = np.random.choice([RAND_VOTE, REG_VOTE],p=[epsilon,1-epsilon])
+        if vote_type == RAND_VOTE:
+            return self.rand_vote()
+        elif vote_type == REG_VOTE:
+            return self.get_best_vote_opt()
 
     #should rename by implementation
     def rand_vote(self):
