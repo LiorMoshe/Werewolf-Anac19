@@ -4,7 +4,6 @@ from agents.uninformed.bodyguard import Bodyguard
 from agents.uninformed.medium import Medium
 from agents.informed.werewolf import Werewolf
 from agents.possessed import Possessed
-from agents.logger import Logger
 
 NO_ROLE = 'none'
 
