@@ -1,11 +1,18 @@
-from .message_parsing import *
+# this code is to allow relative imports from agents directory
+import os, sys
+agents_dir_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../')
+# to prevent adding the directory to PYTHONPATH if already inside
+if agents_dir_path not in sys.path:
+    sys.path.insert(0, agents_dir_path)
+
+from information_processing.message_parsing import *
 import random
 from enum import Enum
 from collections import namedtuple
 from math import pow
-from .processed_sentence import ProcessedSentence
-from ..logger import Logger
-from ..game_roles import GameRoles
+from information_processing.processed_sentence import ProcessedSentence
+from logger import Logger
+from game_roles import GameRoles
 
 
 class AgentStatus(Enum):

@@ -1,13 +1,20 @@
-from .uninformed.villager import Villager
-from .uninformed.seer import Seer
-from .uninformed.bodyguard import Bodyguard
-from .uninformed.medium import Medium
-from .informed.werewolf import Werewolf
-from .possessed import Possessed
+# this code is to allow relative imports from agents directory
+import os, sys
+agents_dir_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.')
+# to prevent adding the directory to PYTHONPATH if already inside
+if agents_dir_path not in sys.path:
+    sys.path.insert(0, agents_dir_path)
+
+from uninformed.villager import Villager
+from uninformed.seer import Seer
+from uninformed.bodyguard import Bodyguard
+from uninformed.medium import Medium
+from informed.werewolf import Werewolf
+from possessed import Possessed
 
 NO_ROLE = 'none'
 
-
+print("ok")
 class AgentContainer(object):
     """
     Because the agents role is decided in run time this class will contain an agent
