@@ -1,4 +1,4 @@
-from .informed import Informed
+from agents.informed.informed import Informed
 
 
 class Werewolf(Informed):

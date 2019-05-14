@@ -1,11 +1,10 @@
-from .message_parsing import *
-import random
+from agents.information_processing.message_parsing import *
 from enum import Enum
 from collections import namedtuple
 from math import pow
-from .processed_sentence import ProcessedSentence
-from ..logger import Logger
-from ..game_roles import GameRoles
+from agents.information_processing.processed_sentence import ProcessedSentence
+from agents.logger import Logger
+from agents.game_roles import GameRoles
 
 
 class AgentStatus(Enum):

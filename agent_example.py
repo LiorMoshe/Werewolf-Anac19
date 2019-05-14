@@ -1,4 +1,4 @@
-import aiwolfpy
+from aiwolfpy.tcpipclient_parsed import connect_parse
 import messages_manager
 from agents.agent_container import AgentContainer
 from agents.logger import Logger
@@ -63,5 +63,5 @@ if __name__=="__main__":
     # Sample code, how to connect to the server.
     Logger("log.txt")
     my_agent = AgentContainer()
-    aiwolfpy.connect_parse(my_agent)
+    connect_parse(my_agent)
     Logger.instance.close()

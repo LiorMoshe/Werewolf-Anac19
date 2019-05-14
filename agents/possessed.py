@@ -1,7 +1,5 @@
-from .uninformed.villager import Villager
-from .informed.werewolf import Werewolf
-from aiwolfpy.contentbuilder import *
-
+from agents.uninformed.villager import Villager
+from agents.informed.werewolf import Werewolf
 
 class Possessed(Villager, Werewolf):
 
