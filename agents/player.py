@@ -9,7 +9,10 @@ if agents_dir_path not in sys.path:
     sys.path.insert(0, agents_dir_path)
 
 from information_processing.agent_strategy import TownsFolkStrategy
+import numpy as np
 
+REG_VOTE = 1
+RAND_VOTE = 2
 
 class GameSettings(object):
     """
@@ -101,6 +104,24 @@ class GameState(object):
         print("Status map: ", self._status_map)
 
 
+class Task:
+    def __init__(self, left, right, lweight, rweight, data):
+        self.left=left
+        self.right=right
+        self.lweight = lweight
+        self.rweight = rweight
+        self.data = data
+        self._len = 1
+
+    # def insert(self, left, right, data):
+    #     pass
+
+    def len(self):
+        '''
+        :return: Tree height.
+        '''
+        return self._len
+
 class Player(ABC):
     """
     Base player class, contains all the common properties to all the players in the game like the
@@ -155,7 +176,7 @@ class Player(ABC):
 
     @abstractmethod
     def getName(self):
-        pass
+        return self.base_info.agentIndex if self.base_info is not None else ""
 
     def initialize(self, base_info, diff_data, game_setting):
         """
@@ -214,4 +235,47 @@ class Player(ABC):
         self._strategy.update(diff_data)
         self.extract_state_info(base_info)
 
+    def reg_vote(self):
+        '''
+        note under vote function until fully tested
+        :return:
+        '''
+        epsilon = 0 if len(self.tasks) == 0 else 0.3
+        vote_type = np.random.choice([RAND_VOTE, REG_VOTE],p=[epsilon,1-epsilon])
+        if vote_type == RAND_VOTE:
+            return self.rand_vote()
+        elif vote_type == REG_VOTE:
+            return self.get_best_vote_opt()
+
+    #should rename by implementation
+    def rand_vote(self):
+        #TODO: if tasks count is large, can try and increase max_depth
+        print("Tasks count: "+len(self.tasks))
+        max_depth = 3
+        tasks_to_handle = []
+        for t_id, task in enumerate(self.tasks):
+            if task.len() > max_depth: #sanity check
+                continue
+            max_depth -= task.len()
+            tasks_to_handle.append(t_id)
+        # Draw task to handle
+        t_id = np.random.choice(tasks_to_handle, p=np.ones(len(tasks_to_handle))/len(tasks_to_handle))
+        # Draw agent_id - currently assume a non recursive structure
+        np.random.choice([self.tasks[t_id].left, self.tasks[t_id].right],
+                         p=[self.tasks[t_id].lweight, self.tasks[t_id].rweight])
+
+    def get_best_vote_opt(self):
+        '''
+        :return: Id of the agent with highest vote score.
+                 If several agents have the same score, chooses one randomly.
+        '''
+        min = -1
+        agent_id = None
+        for id, persp in self._strategy._perspectives.items():
+            if persp.vote_score > min:
+                agent_id = id
+                min = persp.vote_score
+            elif persp.vote_score == min:
+                agent_id = np.random.choice([agent_id, id], p=[0.5,0.5])
+        return agent_id
 

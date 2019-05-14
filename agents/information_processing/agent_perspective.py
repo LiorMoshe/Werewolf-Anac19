@@ -180,7 +180,10 @@ class AgentPerspective(object):
         self._likely_role = None
         self._status = AgentStatus.ALIVE
         self._role = role
-
+        self.vote_score = 0
+        # Represent current agent's change to be voted out of the game
+        #TODO: implement setter + logic
+        self.under_risk_level = 0
         # Messages ordered by day that are directed to me (think these are only inquire and request messages).
         self.messages_to_me = {}
         self._sentences_container = sentences_container
