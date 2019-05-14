@@ -1,4 +1,4 @@
-from .uninformed import Uninformed
+from agents.uninformed.uninformed import Uninformed
 
 
 class Villager(Uninformed):
