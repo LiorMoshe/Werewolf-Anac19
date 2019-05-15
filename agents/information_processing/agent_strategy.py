@@ -1,6 +1,6 @@
-from .agent_perspective import *
-from .message_parsing import *
-from .sentences_container import SentencesContainer
+from agents.information_processing.agent_perspective import *
+from agents.information_processing.message_parsing import *
+from agents.information_processing.sentences_container import SentencesContainer
 
 # These sentences currently, don't help us much (maybe will be used in future dev).
 UNUSEFUL_SENTENCES = ['Skip', 'Over']

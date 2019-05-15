@@ -40,20 +40,19 @@ ACTION_RESULT = [SentenceType.ATTACKED, SentenceType.GUARDED, SentenceType.DIVIN
 # Reason = namedtuple('Reason', 'cause effect')
 
 # Represents a logic statement made by a subject regarding the given sentences.
-LogicStatement = namedtuple('LogicStatement', 'subject type sentences reason day described_day', defaults=(None,) * 6)
+LogicStatement = namedtuple('LogicStatement', 'subject type sentences reason day described_day')
 
 # Shows vote of an agent against specific agent, can hold reason if there is any.
-Vote = namedtuple('Vote', 'votedAgainst type reason day described_day', defaults=(None, SentenceType.VOTE, None, None
-                                                                                  , None))
+Vote = namedtuple('Vote', 'votedAgainst type reason day described_day')
 
 # An action done by the subject on the target.
-Action = namedtuple('Action', 'subject target type reason day described_day', defaults=(None,) * 6)
+Action = namedtuple('Action', 'subject target type reason day described_day')
 
 # Result of an action of the subject on the target, if there is any new result it is held in species.
-ActionResult = namedtuple('ActionResult', 'subject target species type reason day described_day', defaults=(None,) * 7)
+ActionResult = namedtuple('ActionResult', 'subject target species type reason day described_day')
 
 # Knowledge represents messages such as COMINGOUT, ESTIMATE where an agent thinks he knows something about other agents.
-Knowledge = namedtuple('Knowledge', 'subject target role type reason day described_day', defaults=(None,) * 7)
+Knowledge = namedtuple('Knowledge', 'subject target role type reason day described_day')
 
 KNOWLEDGE_TYPES = ['ESTIMATE', 'COMINGOUT']
 
@@ -63,9 +62,9 @@ AVAILABLE_ACTION_RESULTS = ['DIVINED', 'IDENTIFIED', 'GUARDED', 'VOTED', 'ATTACK
 
 LOGIC_OPERATORS = ['AND', 'XOR', 'NOT', 'OR', 'BECAUSE']
 
-Request = namedtuple('Request', 'subject target content type reason day described_day', defaults=(None,) * 6)
+Request = namedtuple('Request', 'subject target content type reason day described_day')
 
-Inquire = namedtuple('Inquire', 'subject target content type reason day described_day', defaults=(None,) * 6)
+Inquire = namedtuple('Inquire', 'subject target content type reason day described_day')
 
 # An opinion is used when an agent says whether he agrees or disagrees with a given sentence
 # (represented as talk number).
@@ -144,7 +143,8 @@ class MessageParser(object):
                                                                               last_parantheses],
                                                              agent_index, day, talk_number, described_day))
 
-        return LogicStatement(subject, operator_type, processed_sentences, day=day, described_day=described_day)
+        return LogicStatement(subject=subject, type=operator_type, sentences=processed_sentences,
+                              reason=None, day=day, described_day=described_day)
 
     def process_sentence(self, sentence, agent_index, day, talk_number, described_day=None):
         """
@@ -165,22 +165,30 @@ class MessageParser(object):
             result = self.parse_with_time_info(sentence, agent_index, day, talk_number)
         elif "REQUEST" in sentence:
             result = MessageParser.parse_request(sentence, agent_index,
-                                                 lambda subject, target, content: Request(subject, target,
-                                                                                          self.process_sentence(
+                                                 lambda subject, target, content: Request(subject=subject,
+                                                                                          target=target,
+                                                                                          content=self.process_sentence(
                                                                                               content.replace(')', ''),
                                                                                               subject, day,
                                                                                               talk_number,
                                                                                               described_day),
-                                                                                          SentenceType.REQUEST))
+                                                                                          type=SentenceType.REQUEST,
+                                                                                          reason=None,
+                                                                                          day=day,
+                                                                                          described_day=described_day))
         elif "INQUIRE" in sentence:
             result = MessageParser.parse_request(sentence, agent_index,
-                                                 lambda subject, target, content: Inquire(subject, target,
-                                                                                          self.process_sentence(
+                                                 lambda subject, target, content: Inquire(subject=subject,
+                                                                                          target=target,
+                                                                                          content=self.process_sentence(
                                                                                               content.replace(')', ''),
                                                                                               subject, day,
                                                                                               talk_number,
                                                                                               described_day),
-                                                                                          SentenceType.INQUIRE))
+                                                                                          type=SentenceType.INQUIRE,
+                                                                                          reason=None,
+                                                                                          day=day,
+                                                                                          described_day=described_day))
         elif "ESTIMATE" in sentence or "COMINGOUT" in sentence:
             result = MessageParser.parse_knowledge_sentence(sentence, agent_index, day, described_day)
         elif "AGREE" in sentence or "DISAGREE" in sentence:
@@ -270,7 +278,8 @@ class MessageParser(object):
             target = extract_agent_idx(parts_of_sentence[2])
             role = parts_of_sentence[3]
 
-        return Knowledge(subject, target, role, knowledge_type, day=day, described_day=described_day)
+        return Knowledge(subject=subject, target=target, role=role, type=knowledge_type,
+                         reason=None, day=day, described_day=described_day)
 
     @staticmethod
     def parse_past_action_sentence(sentence, agent_index, day, described_day):
@@ -302,7 +311,8 @@ class MessageParser(object):
             action_type = parts_of_sentence[1]
             target = extract_agent_idx(parts_of_sentence[2])
             species = parts_of_sentence[3]
-        return ActionResult(subject, target, species, action_type, day=day, described_day=described_day)
+        return ActionResult(subject=subject, target=target, species=species, type=action_type,
+                            reason=None, day=day, described_day=described_day)
 
     def parse_with_time_info(self, sentence, agent_index, day, talk_number):
         """
@@ -340,7 +350,8 @@ class MessageParser(object):
             action_result_type = SentenceType[parts_of_sentence[1]]
             target = extract_agent_idx(parts_of_sentence[2])
 
-        return Action(subject, target, action_result_type, day=day, described_day=described_day)
+        return Action(subject=subject,  target=target, type=action_result_type,
+                      reason=None, day=day, described_day=described_day)
 
 
 if __name__ == "__main__":

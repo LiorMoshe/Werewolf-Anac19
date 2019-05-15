@@ -1,6 +1,6 @@
 from abc import *
 from enum import Enum
-from .information_processing.agent_strategy import TownsFolkStrategy
+from agents.information_processing.agent_strategy import TownsFolkStrategy
 import numpy as np
 
 REG_VOTE = 1
@@ -129,6 +129,7 @@ class Player(ABC):
         self._base_info = None
         self._phase = GamePhase.DAY
         self._strategy = None
+        self._tasks = {}
 
     @property
     def game_settings(self):
@@ -201,12 +202,7 @@ class Player(ABC):
 
     @abstractmethod
     def vote(self):
-        epsilon = 0 if len(self.tasks) == 0 else 0.3
-        vote_type = np.random.choice([RAND_VOTE, REG_VOTE],p=[epsilon,1-epsilon])
-        if vote_type == RAND_VOTE:
-            return self.rand_vote()
-        elif vote_type == REG_VOTE:
-            return self.get_best_vote_opt()
+        pass
 
     @abstractmethod
     def attack(self):
@@ -233,13 +229,25 @@ class Player(ABC):
         self._strategy.update(diff_data)
         self.extract_state_info(base_info)
 
+    def reg_vote(self):
+        '''
+        note under vote function until fully tested
+        :return:
+        '''
+        epsilon = 0 if len(self._tasks) == 0 else 0.3
+        vote_type = np.random.choice([RAND_VOTE, REG_VOTE],p=[epsilon,1-epsilon])
+        if vote_type == RAND_VOTE:
+            return self.rand_vote()
+        elif vote_type == REG_VOTE:
+            return self.get_best_vote_opt()
+
     #should rename by implementation
     def rand_vote(self):
         #TODO: if tasks count is large, can try and increase max_depth
-        print("Tasks count: "+len(self.tasks))
+        print("Tasks count: "+len(self._tasks))
         max_depth = 3
         tasks_to_handle = []
-        for t_id, task in enumerate(self.tasks):
+        for t_id, task in enumerate(self._tasks):
             if task.len() > max_depth: #sanity check
                 continue
             max_depth -= task.len()
@@ -247,8 +255,8 @@ class Player(ABC):
         # Draw task to handle
         t_id = np.random.choice(tasks_to_handle, p=np.ones(len(tasks_to_handle))/len(tasks_to_handle))
         # Draw agent_id - currently assume a non recursive structure
-        np.random.choice([self.tasks[t_id].left, self.tasks[t_id].right],
-                         p=[self.tasks[t_id].lweight, self.tasks[t_id].rweight])
+        np.random.choice([self._tasks[t_id].left, self._tasks[t_id].right],
+                         p=[self._tasks[t_id].lweight, self._tasks[t_id].rweight])
 
     def get_best_vote_opt(self):
         '''
@@ -265,3 +273,8 @@ class Player(ABC):
                 agent_id = np.random.choice([agent_id, id], p=[0.5,0.5])
         return agent_id
 
+    def add_task(self, task, priority):
+        self._tasks[len(self._tasks)]= (priority, task)
+
+    def get_task(self, id):
+        return self._tasks[id]
