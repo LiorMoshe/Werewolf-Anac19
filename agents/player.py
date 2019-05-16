@@ -229,6 +229,9 @@ class Player(ABC):
         if request == "WHISPER":
             print("Base info: ", base_info)
 
+        if request == "TALK":
+            print("TALK REQUEST: " , base_info)
+
         self._strategy.update(diff_data)
         self.extract_state_info(base_info)
 
