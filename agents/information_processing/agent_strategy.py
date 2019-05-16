@@ -1,11 +1,11 @@
 from agents.information_processing.agent_perspective import *
 from agents.information_processing.message_parsing import *
 from agents.information_processing.sentences_container import SentencesContainer
+from agents.game_roles import GameRoles
 import numpy as np 
 
 # These sentences currently, don't help us much (maybe will be used in future dev).
 UNUSEFUL_SENTENCES = ['Skip', 'Over']
-
 
 class MessageType(Enum):
     """
@@ -91,6 +91,25 @@ class TownsFolkStrategy(object):
 
 
 class SeerStrategy(TownsFolkStrategy):
+    weights_dict = {
+        'W_liar': 0.3,
+        'W_admitted_wolf': 0.1,
+        'W_likely_wolf': 0.1,
+        'W_known_wolf_coop': 0.4,
+        'W_known_humans_coop': -0.2,
+        'W_likely_wolf_coop': 0.25,
+        'W_likely_humans_coop': -0.1,
+        'W_known_wolvss_noncoop': -0.2,
+        'W_likely_wolves_noncoop': -0.1,
+        'W_known_humans_noncoop': 0.2,
+        'W_liekly_humans_noncoop': 0.2
+    }
+
+    # convert the dict to weight vector
+    weights = np.asarray(list(weights_dict.values()))
+
+    HUMAN = "HUMAN"
+    WEREWOLF = "WEREWOLF"
 
     def __init__(self, agent_indices, my_index, role_map, statusMap):
         super().__init__(agent_indices, my_index, role_map)
@@ -131,19 +150,100 @@ class SeerStrategy(TownsFolkStrategy):
 
             return ls[idx]
 
+        dead_agents = []
+
         # use prior knowledge to update prospect list
         for agent in self._divine_prospects:
             score = 0
             agent_idx = int(agent)
+            feature_vec = np.zeros(SeerStrategy.weights.shape)
+            
             if (self._perspectives[agent_idx]._status == AgentStatus.DEAD_WEREWOLVES):
                 # If was attacked then definitly NOT a werewolf (if possessed then seer can't know anyhow)   
                 if (agent not in self._divined_agents):
-                    self.update_divine_result(agent, 'HUMAN')
+                    self._divined_agents[agent] =  SeerStrategy.HUMAN
                 
+                dead_agents.append(agent)
+                continue
+            
+            if (self._perspectives[agent_idx]._status == AgentStatus.DEAD_TOWNSFOLK):
+                dead_agents.append(agent)
+                continue
+
+            # look on features and use weights to calculate score
+            perspective = self._perspectives[agent_idx]
+            feature_vec[0] = perspective._liar_score 
+            
+            if (perspective._admitted_role == GameRoles.WEREWOLF):
+                feature_vec[1] = 1
+
+            if (perspective._likely_role == GameRoles.WEREWOLF):
+                feature_vec[2] = 1
+
+            # iterate over cooperators and non_cooperators
+            self.get_cooperators_non_cooperators_features(perspective, feature_vec)
+
+            # calculate the suspicious score
+            score = feature_vec.dot(SeerStrategy.weights)
+
+            self._divine_prospects[agent] = score
+
+        # clean prospects that are dead (not in previous loop since it causes side effect to change object during iteration)
+        for dead_agent in dead_agents:
+            try:
+                del self._divine_prospects[dead_agent]
+            except:
+                pass
+        
         # decide
         agent_to_divine = max(self._divine_prospects.keys(), key=(lambda key: self._divine_prospects[key]))
 
         return str(agent_to_divine)
+
+    def get_cooperators_non_cooperators_features(self, perspective, feature_vec):
+        known_werewolves_in_cooperators = 0
+        known_humans_in_cooperators = 0
+        likely_werewolves_in_cooperators = 0
+        likely_humans_in_cooperators = 0
+        for coop in perspective._cooperators:
+            # check if a known werewolf in cooperators
+            if (str(coop) in self._divined_agents):
+                if (self._divined_agents[str(coop)] == SeerStrategy.WEREWOLF):
+                    known_werewolves_in_cooperators += 1
+                elif (self._divined_agents[str(coop)] == SeerStrategy.HUMAN):
+                    known_humans_in_cooperators += 1
+            else: # look at likely role
+                if (perspective[coop]._likely_role == GameRoles.WEREWOLF):
+                    likely_werewolves_in_cooperators += 1
+                else:
+                    likely_humans_in_cooperators += 1
+            
+        known_werewolves_in_non_cooperators = 0
+        known_humans_in_non_cooperators = 0
+        likely_werewolves_in_non_cooperators = 0
+        likely_humans_in_non_cooperators = 0
+        for noncoop in perspective._non_cooperators:
+            # check if a known werewolf in non cooperators
+            if (str(noncoop) in self._divined_agents):
+                if (self._divined_agents[str(noncoop)] == SeerStrategy.WEREWOLF):
+                    known_werewolves_in_non_cooperators += 1
+                elif (self._divined_agents[str(noncoop)] == SeerStrategy.HUMAN):
+                    known_humans_in_non_cooperators += 1
+            else: # look at likely role
+                if (perspective[coop]._likely_role == GameRoles.WEREWOLF):
+                    likely_werewolves_in_non_cooperators += 1
+                else:
+                    likely_humans_in_non_cooperators += 1
+
+        feature_vec[3] = known_werewolves_in_cooperators
+        feature_vec[4] = known_humans_in_cooperators
+        feature_vec[5] = likely_werewolves_in_cooperators
+        feature_vec[6] = likely_humans_in_cooperators
+        feature_vec[7] = known_werewolves_in_non_cooperators
+        feature_vec[8] = likely_werewolves_in_non_cooperators
+        feature_vec[9] = known_humans_in_non_cooperators
+        feature_vec[10] = likely_humans_in_non_cooperators
+
 
     def talk(self):
         pass
@@ -154,11 +254,22 @@ for each agent in prospects:
     look at perspective :
         agent status:
             if dead then remove from prospects.
+
+            if killed by werewolfs then:
+                1. definitly human.
         
         liar score 0.3
-        admitted role 0.2
-        likely role 0.25
-        check if a known werewolf in cooperators 0.4
+        admitted role 0.1
+        likely role 0.1
+
+        check if a known werewolf in cooperators 0.4 * (num of wolves)
+        how many known humans in coopopertors: k * -0.2 
+        how many known wolfs in enemies: m * -0.2
+
+        check if a likely werewolf in cooperators 0.25 * (num of wolves)
+        how many likely humans in coopopertors: k * -0.1 
+        how many likely wolfs in enemies: m * -0.1
+
 
         each day:
             0.4 * prev score + 0.6 * current score 
