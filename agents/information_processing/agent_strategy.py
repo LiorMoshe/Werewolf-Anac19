@@ -1,6 +1,7 @@
 from agents.information_processing.agent_perspective import *
 from agents.information_processing.message_parsing import *
 from agents.information_processing.sentences_container import SentencesContainer
+import numpy as np 
 
 # These sentences currently, don't help us much (maybe will be used in future dev).
 UNUSEFUL_SENTENCES = ['Skip', 'Over']
@@ -24,6 +25,7 @@ class MessageType(Enum):
     ATTACK_VOTE = 5,
     WHISPER = 6,
     FINISH = 7,
+    DIVINE = 8
 
 
 class TownsFolkStrategy(object):
@@ -52,13 +54,20 @@ class TownsFolkStrategy(object):
         """
         for i in range(len(diff_data.index)):
             curr_index = diff_data.loc[i, 'agent']
+            agent_sentence = diff_data.loc[i, 'text']
+            talk_number = diff_data.loc[i, 'idx']
+            day = diff_data.loc[i, 'day']
+            message_type = MessageType[diff_data.loc[i, 'type'].upper()]
 
+            # only seer and medium players will see
+            if message_type == MessageType.DIVINE:
+                print("DIVINE MESSAGE RECEIVED")
+                parsed_sentence = self._message_parser.process_sentence(agent_sentence, curr_index, day,
+                                                                       talk_number)
+                # store divined results
+                self.update_divine_result(parsed_sentence.target, parsed_sentence.species)
+                
             if curr_index in self._perspectives.keys():
-                agent_sentence = diff_data.loc[i, 'text']
-                talk_number = diff_data.loc[i, 'idx']
-                message_type = MessageType[diff_data.loc[i, 'type'].upper()]
-                day = diff_data.loc[i, 'day']
-
                 if agent_sentence not in UNUSEFUL_SENTENCES:
                     parsed_sentence = self._message_parser.process_sentence(agent_sentence, curr_index, day,
                                                                             talk_number)
@@ -79,3 +88,78 @@ class TownsFolkStrategy(object):
                     self._perspectives[curr_index].update_real_role(parsed_sentence.role)
                 self._perspectives[curr_index].switch_sides(day )
                 self._perspectives[curr_index].log_perspective()
+
+
+class SeerStrategy(TownsFolkStrategy):
+
+    def __init__(self, agent_indices, my_index, role_map, statusMap):
+        super().__init__(agent_indices, my_index, role_map)
+        
+        self.my_index = my_index
+        self._divined_agents = {}
+
+        self.is_first_day = True
+
+        # create prospect map {agent Idx -> suspicious score}
+        self._divine_prospects = {}
+        my_index_str = str(my_index)
+        for agent in statusMap.keys():
+            if (agent != my_index_str):
+                self._divine_prospects[agent] = 0
+
+    def update_divine_result(self, agent, species):
+        # no longer a prospect
+        try:
+            del self._divine_prospects[str(agent)]
+            print("PROSPECTS")
+            print(self._divine_prospects)
+        except Exception as e:
+            print("ERRRORRRRR {}".format(e))
+        
+        self._divined_agents[str(agent)] = species
+        self.print_divined_agents()
+
+    def print_divined_agents(self):
+        print("DIVINED LIST:")
+        print(self._divined_agents)
+
+    def get_next_divine(self):
+        # if first day no prior knowledge -> random divine
+        if self.is_first_day:
+            ls = list(self._divine_prospects.keys())
+            idx = np.random.randint(0, len(ls))
+
+            return ls[idx]
+
+        # use prior knowledge to update prospect list
+        for agent in self._divine_prospects:
+            score = 0
+            agent_idx = int(agent)
+            if (self._perspectives[agent_idx]._status == AgentStatus.DEAD_WEREWOLVES):
+                # If was attacked then definitly NOT a werewolf (if possessed then seer can't know anyhow)   
+                if (agent not in self._divined_agents):
+                    self.update_divine_result(agent, 'HUMAN')
+                
+        # decide
+        agent_to_divine = max(self._divine_prospects.keys(), key=(lambda key: self._divine_prospects[key]))
+
+        return str(agent_to_divine)
+
+    def talk(self):
+        pass
+
+
+'''
+for each agent in prospects:
+    look at perspective :
+        agent status:
+            if dead then remove from prospects.
+        
+        liar score 0.3
+        admitted role 0.2
+        likely role 0.25
+        check if a known werewolf in cooperators 0.4
+
+        each day:
+            0.4 * prev score + 0.6 * current score 
+'''
