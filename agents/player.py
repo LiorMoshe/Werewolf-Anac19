@@ -1,11 +1,11 @@
 from abc import *
 from enum import Enum
+from agents.player_perspective import PlayerPerspective
 from agents.information_processing.agent_strategy import TownsFolkStrategy
 import numpy as np
 
 REG_VOTE = 1
 RAND_VOTE = 2
-
 
 class GameSettings(object):
     """
@@ -183,11 +183,13 @@ class Player(ABC):
         self._game_settings = GameSettings(game_setting)
         self._base_info = GameState(base_info)
 
+        agents_idx = [i for i in range(1, self._game_settings._player_num)
+                                            if i != self._base_info._agentIndex]
         # Initialize the agent belief builder.
-        self._strategy = TownsFolkStrategy([i for i in range(1, self._game_settings._player_num)
-                                            if i != self._base_info._agentIndex],
+        self._strategy = TownsFolkStrategy(agents_idx,
                                            self._base_info._agentIndex,
                                            self._base_info._role_map)
+        self._player_perspective = PlayerPerspective(agents_idx)
 
     def dayStart(self):
         self._phase = GamePhase.DAY
@@ -257,6 +259,7 @@ class Player(ABC):
         # Draw agent_id - currently assume a non recursive structure
         np.random.choice([self._tasks[t_id].left, self._tasks[t_id].right],
                          p=[self._tasks[t_id].lweight, self._tasks[t_id].rweight])
+        self._tasks.pop(t_id)
 
     def get_best_vote_opt(self):
         '''
@@ -274,7 +277,9 @@ class Player(ABC):
         return agent_id
 
     def add_task(self, task, priority):
-        self._tasks[len(self._tasks)]= (priority, task)
+        id = len(self._tasks)
+        self._tasks[id]= (priority, task)
+        return id
 
     def get_task(self, id):
         return self._tasks[id]
