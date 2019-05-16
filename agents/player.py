@@ -126,7 +126,7 @@ class Player(ABC):
         """
         self._game_settings = None
         self._base_info = None
-        self._phase = GamePhase.DAY
+        self._phase = GamePhase.DAY #??????
         self._strategy = None
         self._tasks = {}
 

@@ -183,6 +183,11 @@ class AgentPerspective(object):
     def get_index(self):
         return self._index
 
+    def get_closest_cooperators(self,day):
+        cooperators_fondness = [(self._cooperators[coop].get_fondness(day),coop) for coop in self._cooperators.keys()]
+        #closest_cooperator = cooperators_fondness[np.argmax(cooperators_fondness)][1]
+        return cooperators_fondness#self._cooperators[closest_cooperator]
+
     def update_status(self, status):
         self._status = status
 
