@@ -1,6 +1,5 @@
 from abc import *
 from enum import Enum
-from agents.information_processing.agent_strategy import TownsFolkStrategy
 import numpy as np
 
 REG_VOTE = 1
@@ -171,6 +170,13 @@ class Player(ABC):
     def getName(self):
         return self.base_info.agentIndex if self.base_info is not None else ""
 
+    @abstractmethod
+    def init_strategy(self, base_info, diff_data, game_setting):
+        """
+        To enable each player to decide its strategy.
+        """
+        pass
+
     def initialize(self, base_info, diff_data, game_setting):
         """
         Initialization should be common between all players.
@@ -182,11 +188,8 @@ class Player(ABC):
         self._game_settings = GameSettings(game_setting)
         self._base_info = GameState(base_info)
 
-        # Initialize the agent belief builder.
-        self._strategy = TownsFolkStrategy([i for i in range(1, self._game_settings._player_num)
-                                            if i != self._base_info._agentIndex],
-                                           self._base_info._agentIndex,
-                                           self._base_info._role_map)
+        # allow each player to choose its strategy when invoked
+        self.init_strategy(base_info, diff_data, game_setting)
 
     def dayStart(self):
         self._phase = GamePhase.DAY
