@@ -16,13 +16,19 @@ class Bodyguard(Villager):
         return "Bodyguard"
 
     def talk(self):
+        #TODO: IMPLEMENT
         return "COMINGOUT Agent[01] WEREWOLF"
 
     def whisper(self):
-        return ""
+        pass
 
     def vote(self):
-        return "1"
+        #TODO: remove if no additional logic
+        '''
+        Should vote with the same logic as villager
+        :return:
+        '''
+        return self.vote()
 
     def attack(self):
         pass
@@ -31,7 +37,27 @@ class Bodyguard(Villager):
         pass
 
     def guard(self):
-        return "1"
+        pass
+
+
+    def non_tested_guard(self):
+        agent_id = None
+        guard_score = 0
+        guard_risk = 0
+        #TODO: maybe add epsilon in case there is no one with 0-vote score such that anyone with vote weight below epsilon could be considered
+        #TODO:IMPLEMENT THAT IF IM AT RISK I SHOULD DEFENED MYSELF
+        #TODO: IF NOBODY DIED IN THE ATTACK BODYGUARD MYSELF
+        if self._strategy is None:
+            return self.getName()
+        for id,agent_persp in self._strategy._perspectives.items():
+            if agent_persp.vote_score <= guard_score and (agent_id is None or agent_persp.under_risk_level>guard_risk):
+                guard_score = agent_persp.vote_score
+                guard_risk = agent_persp.under_risk_level
+                agent_id = id
+        if agent_id is None:
+            return self.getName()
+
 
     def extract_state_info(self, base_info):
         pass
+
