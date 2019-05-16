@@ -62,6 +62,6 @@ class Werewolf(object):
 if __name__=="__main__":
     # Sample code, how to connect to the server.
     Logger("log.txt")
-    my_agent = AgentContainer()
+    my_agent = AgentContainer(name="OR_TEST_SEER")
     connect_parse(my_agent)
     Logger.instance.close()
