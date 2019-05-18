@@ -157,7 +157,7 @@ class MessageParser(object):
         :param described_day Day stated in the message (for example, on Day 1 agent x said ...).
         :return: Object representing this sentence.
         """
-        print("PROCESSING SENTENCE: " + sentence)
+        # print("PROCESSING SENTENCE: " + sentence)
         result = None
         if any(logic_operator in sentence for logic_operator in LOGIC_OPERATORS):
             result = self.parse_sentence_with_logic(sentence, agent_index, day, talk_number, described_day)

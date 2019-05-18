@@ -163,7 +163,7 @@ class AgentPerspective(object):
         :param agent_idx: Index of this agent.
         :param my_idx: Index of our agent.
         """
-        self._index = agent_idx
+        self.index = agent_idx
         self.my_agent = my_idx
         self._liar_score = 0.0
         self._cooperators = {}
@@ -181,7 +181,7 @@ class AgentPerspective(object):
         self._sentences_container = sentences_container
 
     def get_index(self):
-        return self._index
+        return self.index
 
     def update_status(self, status):
         self._status = status
@@ -213,12 +213,12 @@ class AgentPerspective(object):
             self._cooperators[message.target].update_fondness(-hostility, message)
         else:
             if message.target not in self._noncooperators.keys():
-                Logger.instance.write("[AGENT " + str(self._index) + "]: Adding a new enemy: " + str(message.target) + \
+                Logger.instance.write("[AGENT " + str(self.index) + "]: Adding a new enemy: " + str(message.target) + \
                                       " based on message: " + str(message))
                 self._noncooperators[message.target] = non_cooperator
             else:
                 # Update the hostility.
-                Logger.instance.write("[AGENT " + str(self._index) + "]: Updating existing enemy: " + str(message.target)
+                Logger.instance.write("[AGENT " + str(self.index) + "]: Updating existing enemy: " + str(message.target)
                                       + " based on message " + str(message))
                 self._noncooperators[message.target].update_hostility(hostility, message)
         return [processed]
@@ -474,14 +474,14 @@ class AgentPerspective(object):
         """
         result = None
         if message.type == SentenceType.ESTIMATE or message.type == SentenceType.COMINGOUT:
-            if message.target == self._index:
+            if message.target == self.index:
                 result = self.update_admitted_role(message)
             elif GameRoles[message.role] == GameRoles.WEREWOLF or GameRoles[message.role] == GameRoles.POSSESSED:
                 result = self.update_non_cooperator(message, hostility=1 / scale)
 
         elif message.type == SentenceType.VOTE:
-            print("Agent Idx: " + str(self._index) + " got vote: " + str(message))
-            Logger.instance.write("Agent Idx: " + str(self._index) + " got vote: " + str(message))
+            print("Agent Idx: " + str(self.index) + " got vote: " + str(message))
+            Logger.instance.write("Agent Idx: " + str(self.index) + " got vote: " + str(message))
             result = self.update_non_cooperator(message, hostility=1.5 / scale)
         elif message.type == SentenceType.REQUEST:
             result = self.update_based_on_request(message, talk_number)
@@ -497,6 +497,8 @@ class AgentPerspective(object):
             result = self.update_based_on_or(message,  talk_number)
         elif message.type == SentenceType.NOT:
             self.update_based_on_not(message, talk_number)
+        elif message.type == SentenceType.AND:
+            self.update_based_on_and(message, talk_number)
 
         if result is not None:
             self._sentences_container.add_sentence(talk_number, message)
@@ -522,6 +524,12 @@ class AgentPerspective(object):
         """
         self.update_non_cooperator(vote, hostility=4)
 
+    def get_cooperators(self):
+        return list(self._cooperators.keys())
+
+    def get_enemies(self):
+        return list(self._noncooperators.keys())
+
     def lie_detected(self):
         """
         In case a lie was detected we will increment the liar score of this agent, it is more likely that
@@ -531,7 +539,7 @@ class AgentPerspective(object):
         self._liar_score += 1
 
     def log_perspective(self):
-        Logger.instance.write("Logging perspective of agent: " + str(self._index))
+        Logger.instance.write("Logging perspective of agent: " + str(self.index))
         for idx, cooperator in self._cooperators.items():
             Logger.instance.write(str(cooperator))
 

@@ -1,6 +1,7 @@
 from agents.information_processing.agent_perspective import *
 from agents.information_processing.message_parsing import *
 from agents.information_processing.sentences_container import SentencesContainer
+from agents.information_processing.group_finder import  GroupFinder
 import numpy as np 
 
 # These sentences currently, don't help us much (maybe will be used in future dev).
@@ -45,6 +46,7 @@ class TownsFolkStrategy(object):
 
         # TODO - This is the model that will be implemented.
         self._model = None
+        self._group_finder = GroupFinder(agent_indices + [my_index])
 
     def update(self, diff_data):
         """
@@ -52,6 +54,7 @@ class TownsFolkStrategy(object):
         :param diff_data:
         :return:
         """
+        self._group_finder.clean_groups()
         for i in range(len(diff_data.index)):
             curr_index = diff_data.loc[i, 'agent']
             agent_sentence = diff_data.loc[i, 'text']
@@ -86,8 +89,14 @@ class TownsFolkStrategy(object):
                     print("Got whisper when I am in townsfolk, BUG.")
                 elif message_type == MessageType.FINISH:
                     self._perspectives[curr_index].update_real_role(parsed_sentence.role)
-                self._perspectives[curr_index].switch_sides(day )
+
+                self._perspectives[curr_index].switch_sides(day)
                 self._perspectives[curr_index].log_perspective()
+
+        self._group_finder.find_groups(self._perspectives)
+        self._group_finder.log_groups()
+
+
 
 
 class SeerStrategy(TownsFolkStrategy):
