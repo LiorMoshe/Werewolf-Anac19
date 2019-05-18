@@ -102,7 +102,7 @@ class SeerStrategy(TownsFolkStrategy):
         'W_known_wolvss_noncoop': -0.2,
         'W_likely_wolves_noncoop': -0.1,
         'W_known_humans_noncoop': 0.2,
-        'W_liekly_humans_noncoop': 0.2
+        'W_likely_humans_noncoop': 0.2
     }
 
     # convert the dict to weight vector
@@ -147,6 +147,7 @@ class SeerStrategy(TownsFolkStrategy):
         if self.is_first_day:
             ls = list(self._divine_prospects.keys())
             idx = np.random.randint(0, len(ls))
+            self.is_first_day = False
 
             return ls[idx]
 
@@ -181,7 +182,9 @@ class SeerStrategy(TownsFolkStrategy):
                 feature_vec[2] = 1
 
             # iterate over cooperators and non_cooperators
+            print("BEFORE {}".format(feature_vec))
             self.get_cooperators_non_cooperators_features(perspective, feature_vec)
+            print("after {}".format(feature_vec))
 
             # calculate the suspicious score
             score = feature_vec.dot(SeerStrategy.weights)
@@ -213,7 +216,7 @@ class SeerStrategy(TownsFolkStrategy):
                 elif (self._divined_agents[str(coop)] == SeerStrategy.HUMAN):
                     known_humans_in_cooperators += 1
             else: # look at likely role
-                if (perspective[coop]._likely_role == GameRoles.WEREWOLF):
+                if (self._perspectives[coop]._likely_role == GameRoles.WEREWOLF):
                     likely_werewolves_in_cooperators += 1
                 else:
                     likely_humans_in_cooperators += 1
@@ -222,7 +225,7 @@ class SeerStrategy(TownsFolkStrategy):
         known_humans_in_non_cooperators = 0
         likely_werewolves_in_non_cooperators = 0
         likely_humans_in_non_cooperators = 0
-        for noncoop in perspective._non_cooperators:
+        for noncoop in perspective._noncooperators:
             # check if a known werewolf in non cooperators
             if (str(noncoop) in self._divined_agents):
                 if (self._divined_agents[str(noncoop)] == SeerStrategy.WEREWOLF):
@@ -230,7 +233,7 @@ class SeerStrategy(TownsFolkStrategy):
                 elif (self._divined_agents[str(noncoop)] == SeerStrategy.HUMAN):
                     known_humans_in_non_cooperators += 1
             else: # look at likely role
-                if (perspective[coop]._likely_role == GameRoles.WEREWOLF):
+                if (self._perspectives[noncoop]._likely_role == GameRoles.WEREWOLF):
                     likely_werewolves_in_non_cooperators += 1
                 else:
                     likely_humans_in_non_cooperators += 1
@@ -244,12 +247,12 @@ class SeerStrategy(TownsFolkStrategy):
         feature_vec[9] = known_humans_in_non_cooperators
         feature_vec[10] = likely_humans_in_non_cooperators
 
-
     def talk(self):
         pass
 
 
 '''
+DIVINE STRATEGY
 for each agent in prospects:
     look at perspective :
         agent status:
@@ -273,4 +276,10 @@ for each agent in prospects:
 
         each day:
             0.4 * prev score + 0.6 * current score 
+
+
+TALK STRATEGY
+
+COMINGOUT / ESTIMATE - only if prior knowledge exists about werewolves
+
 '''
