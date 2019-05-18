@@ -1,12 +1,13 @@
 from agents.game_roles import GameRoles
 
-class PlayerPerspective():
+class PlayerPerspective(object):
+
     def __init__(self, agent_indices):
         # Represent current agent's chance to be voted out of the game
         #TODO: Maybe we shouldn't count actuall votes? in order to detect actual wolf intent
-        self.agent_2_agents_votes = {id: {} for id in agent_indices} # dictionary of agents -> dictionary of agents vote count
-        self.prev_votes_map = {id: {} for id in agent_indices}
-        self.under_heat_value = {id:0 for id in agent_indices}
+        self.agent_2_agents_votes = {agent_idx: {} for agent_idx in agent_indices} # dictionary of agents -> dictionary of agents vote count
+        self.prev_votes_map = {agent_idx: {} for agent_idx in agent_indices}
+        self.under_heat_value = {agent_idx:0 for agent_idx in agent_indices}
         self.talk_num_2_target = {}
         self.agent_2_total_votes = {}
 

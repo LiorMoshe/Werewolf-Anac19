@@ -1,6 +1,7 @@
 from agents.information_processing.agent_perspective import *
 from agents.information_processing.message_parsing import *
 from agents.information_processing.sentences_container import SentencesContainer
+from agents.player_perspective import PlayerPerspective
 
 # These sentences currently, don't help us much (maybe will be used in future dev).
 UNUSEFUL_SENTENCES = ['Skip', 'Over']
@@ -37,8 +38,10 @@ class TownsFolkStrategy(object):
         self._perspectives = {}
         self._message_parser = MessageParser()
         self._sentences_container = SentencesContainer()
+
+        player_perspective = PlayerPerspective()
         for idx in agent_indices:
-            self._perspectives[idx] = AgentPerspective(idx, my_index, self._sentences_container,
+            self._perspectives[idx] = AgentPerspective(idx, my_index, self._sentences_container, player_perspective,
                                                        None if idx not in role_map.keys() else role_map[idx])
 
         # TODO - This is the model that will be implemented.
