@@ -346,7 +346,7 @@ class AgentPerspective(object):
         """
         Update based on given or message, current naive implementation updates based on each sentence with lower scale
         of fondness or hostility.
-        TODO - Look at the most likely sentence based on my agent's perspective and scale the hostility or fondness
+        TODO - Look at the most likely s entence based on my agent's perspective and scale the hostility or fondness
         based on the probabilities that my agent gives to one of these events happening based on his perspective.
         :param message:
         :param talk_number
@@ -407,8 +407,6 @@ class AgentPerspective(object):
             in_fondness = self.update_non_cooperator
         processed_sentences = self._sentences_container.get_sentence(talk_number)
         self.reprocess_sentences(processed_sentences, in_hostility, in_fondness)
-
-        # TODO - Does player perspective need the sentence of agreement/disagreement or the sentence referenced by the talk number?
         self._player_perspective.msg_event(message, talk_number)
         return result
 
