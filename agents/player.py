@@ -7,6 +7,7 @@ import numpy as np
 REG_VOTE = 1
 RAND_VOTE = 2
 
+
 class GameSettings(object):
     """
     Settings of the game, this is just a bunch of static properties.
@@ -172,6 +173,13 @@ class Player(ABC):
     def getName(self):
         return self.base_info.agentIndex if self.base_info is not None else ""
 
+    @abstractmethod
+    def init_strategy(self, base_info, diff_data, game_setting):
+        """
+        To enable each player to decide its strategy.
+        """
+        pass
+
     def initialize(self, base_info, diff_data, game_setting):
         """
         Initialization should be common between all players.
@@ -185,11 +193,13 @@ class Player(ABC):
 
         agents_idx = [i for i in range(1, self._game_settings._player_num)
                                             if i != self._base_info._agentIndex]
-        # Initialize the agent belief builder.
-        self._strategy = TownsFolkStrategy(agents_idx,
-                                           self._base_info._agentIndex,
-                                           self._base_info._role_map)
+        # # Initialize the agent belief builder.
+        # self._strategy = TownsFolkStrategy(agents_idx,
+        #                                    self._base_info._agentIndex,
+        #                                    self._base_info._role_map)
         self._player_perspective = PlayerPerspective(agents_idx)
+        # allow each player to choose its strategy when invoked
+        self.init_strategy(base_info, diff_data, game_setting)
 
     def dayStart(self):
         self._phase = GamePhase.DAY
