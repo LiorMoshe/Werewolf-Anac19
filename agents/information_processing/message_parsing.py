@@ -6,6 +6,30 @@ class Species(Enum):
     HUMANS = 1,
     WEREWOLVES = 2
 
+def append_zero(num, required_digits=1):
+    """
+    Given a number append a zero to it if it has a single digit, used for the talk number's
+    string format.
+    :param num:
+    :param required_digits
+    :return:
+    """
+    return "0" * (required_digits - int(num / (10  ** required_digits))) + str(num)
+
+
+class TalkNumber(object):
+
+    def __init__(self, day, talk_turn, idx):
+        self.day = day
+        self.idx = idx
+        self.talk_turn = talk_turn
+
+    def __str__(self):
+        return "Day" + append_zero(self.day) + " " + append_zero(self.talk_turn) + "[" + \
+                   str(append_zero(self.idx, required_digits=2)) + "]"
+
+    def __eq__(self, other):
+        return self.day == other.day and self.idx == other.idx and self.talk_turn == other.talk_turn
 
 class SentenceType(Enum):
     ESTIMATE = 1,
@@ -157,7 +181,7 @@ class MessageParser(object):
         :param described_day Day stated in the message (for example, on Day 1 agent x said ...).
         :return: Object representing this sentence.
         """
-        print("PROCESSING SENTENCE: " + sentence)
+        # print("PROCESSING SENTENCE: " + sentence)
         result = None
         if any(logic_operator in sentence for logic_operator in LOGIC_OPERATORS):
             result = self.parse_sentence_with_logic(sentence, agent_index, day, talk_number, described_day)
@@ -198,7 +222,7 @@ class MessageParser(object):
         elif any(action_result in sentence for action_result in AVAILABLE_ACTION_RESULTS):
             result = MessageParser.parse_past_action_sentence(sentence, agent_index, day, described_day)
 
-        self._talk_number_to_message[talk_number] = result
+        self._talk_number_to_message[str(talk_number)] = result
         return result
 
     def parse_opinion(self, sentence, agent_idx, day, described_day):
