@@ -239,8 +239,7 @@ class Player(ABC):
             print("Base info: ", base_info)
         if request == "DAILY_FINISH":
             self._player_perspective.end_of_day()
-        if request == "DAILY_INITIALIZE":
-            self._player_perspective.new_day(diff_data)
+        self._player_perspective.update(diff_data)
         self._strategy.update(diff_data)
         self.extract_state_info(base_info, diff_data, request)
 

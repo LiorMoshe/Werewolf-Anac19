@@ -10,7 +10,6 @@ class PlayerPerspective(object):
         print(self.agent_2_agents_votes)
         self.talk_num_2_target = {}
         self.agent_2_total_votes = {}
-        self.last_attacked = None
 
     #based on msg - count
     def update_potential_vote_data(self, subject, target, talk_number):
@@ -28,15 +27,14 @@ class PlayerPerspective(object):
         curr_votes_val = sum([v / len(self.agent_2_agents_votes) for k, v in self.agent_2_agents_votes[agent_id]])
         return weights[0]*non_coop + weights[1]*prev_votes_val + weights[2]*curr_votes_val
 
-    def new_day(self, diff_data):
+    def update(self, diff_data):
         '''
         Add votes to prev_votes_map and reset current turns potential votes
         '''
-        self.last_attacked = None
-        for line_num, txt in enumerate(diff_data["text"]):
+        for line_num, txt in enumerate(diff_data["type"]):
             if txt == "vote":
                 try:
-                    voted_agent = int(txt.split("[")[1][:-1])
+                    voted_agent = int(diff_data.loc[line_num,"text"].split("[")[1][:-1])
                     voting_agent = diff_data["agent"][line_num]
                     self.prev_votes_map[voted_agent][voting_agent] = self.prev_votes_map[voted_agent].setdefault(voting_agent, 0) + 1
                 except ValueError:
