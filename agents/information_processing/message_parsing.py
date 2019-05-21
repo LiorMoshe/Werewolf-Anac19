@@ -67,7 +67,7 @@ ACTION_RESULT = [SentenceType.ATTACKED, SentenceType.GUARDED, SentenceType.DIVIN
 LogicStatement = namedtuple('LogicStatement', 'subject type sentences reason day described_day')
 
 # Shows vote of an agent against specific agent, can hold reason if there is any.
-Vote = namedtuple('Vote', 'votedAgainst type reason day described_day')
+Vote = namedtuple('Vote', 'subject target type reason day described_day')
 
 # An action done by the subject on the target.
 Action = namedtuple('Action', 'subject target type reason day described_day')

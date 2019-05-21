@@ -11,7 +11,7 @@ class Seer(Villager):
                                 if i != self._base_info._agentIndex],
                                 self._base_info._agentIndex,
                                 self._base_info._role_map,
-                                base_info["statusMap"])
+                                base_info["statusMap"], self._player_perspective)
 
     def talk(self):
         print("Called  TALK")
@@ -37,7 +37,7 @@ class Seer(Villager):
     def guard(self):
         pass
 
-    def extract_state_info(self, base_info):
+    def extract_state_info(self, base_info, diff_data, request):
         pass
 
 

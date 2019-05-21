@@ -3,6 +3,7 @@ from enum import Enum
 from agents.player_perspective import PlayerPerspective
 from agents.information_processing.agent_strategy import TownsFolkStrategy
 import numpy as np
+from enum import Enum
 
 REG_VOTE = 1
 RAND_VOTE = 2
@@ -171,7 +172,7 @@ class Player(ABC):
 
     @abstractmethod
     def getName(self):
-        return self.base_info.agentIndex if self.base_info is not None else ""
+        pass
 
     @abstractmethod
     def init_strategy(self, base_info, diff_data, game_setting):
@@ -190,9 +191,8 @@ class Player(ABC):
         """
         self._game_settings = GameSettings(game_setting)
         self._base_info = GameState(base_info)
-
-        agents_idx = [i for i in range(1, self._game_settings._player_num)
-                                            if i != self._base_info._agentIndex]
+        self.player_id = base_info['agentIdx']
+        agents_idx = [i for i in range(1, self._game_settings._player_num+1)]
         # # Initialize the agent belief builder.
         # self._strategy = TownsFolkStrategy(agents_idx,
         #                                    self._base_info._agentIndex,
@@ -237,9 +237,12 @@ class Player(ABC):
         print(diff_data.to_string())
         if request == "WHISPER":
             print("Base info: ", base_info)
-
+        if request == "DAILY_FINISH":
+            self._player_perspective.end_of_day()
+        if request == "DAILY_INITIALIZE":
+            self._player_perspective.new_day(diff_data)
         self._strategy.update(diff_data)
-        self.extract_state_info(base_info)
+        self.extract_state_info(base_info, diff_data, request)
 
     def reg_vote(self):
         '''

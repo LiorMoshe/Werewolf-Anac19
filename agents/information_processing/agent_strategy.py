@@ -36,12 +36,13 @@ class TownsFolkStrategy(object):
     inspects moves of werewolves teammates through the night and day.
     """
 
-    def __init__(self, agent_indices, my_index, role_map):
+    def __init__(self, agent_indices, my_index, role_map, player_perspective):
         self._perspectives = {}
         self._message_parser = MessageParser()
         self._sentences_container = SentencesContainer()
+
         for idx in agent_indices:
-            self._perspectives[idx] = AgentPerspective(idx, my_index, self._sentences_container,
+            self._perspectives[idx] = AgentPerspective(idx, my_index, self._sentences_container, player_perspective,
                                                        None if idx not in role_map.keys() else role_map[idx])
 
         # TODO - This is the model that will be implemented.
@@ -55,21 +56,21 @@ class TownsFolkStrategy(object):
         """
         for i in range(len(diff_data.index)):
             curr_index = diff_data.loc[i, 'agent']
-            agent_sentence = diff_data.loc[i, 'text']
-            idx = diff_data.loc[i, 'idx']
-            turn = diff_data.loc[i, 'turn']
-            day = diff_data.loc[i, 'day']
-            message_type = MessageType[diff_data.loc[i, 'type'].upper()]
-            talk_number = TalkNumber(day, turn, idx)
+
+            if curr_index in self._perspectives.keys():
+                agent_sentence = diff_data.loc[i, 'text']
+                talk_number = diff_data.loc[i, 'idx']
+                message_type = MessageType[diff_data.loc[i, 'type'].upper()]
+                day = diff_data.loc[i, 'day']
 
             # only seer and medium players will see
-            if message_type == MessageType.DIVINE:
-                print("DIVINE MESSAGE RECEIVED")
-                parsed_sentence = self._message_parser.process_sentence(agent_sentence, curr_index, day,
-                                                                       talk_number)
-                # store divined results
-                self.update_divine_result(parsed_sentence.target, parsed_sentence.species)
-                
+            # if message_type == MessageType.DIVINE:
+            #     print("DIVINE MESSAGE RECEIVED")
+            #     parsed_sentence = self._message_parser.process_sentence(agent_sentence, curr_index, day,
+            #                                                            talk_number)
+            #     # store divined results
+            #     self.update_divine_result(parsed_sentence.target, parsed_sentence.species)
+
             if curr_index in self._perspectives.keys():
                 if agent_sentence not in UNUSEFUL_SENTENCES:
                     parsed_sentence = self._message_parser.process_sentence(agent_sentence, curr_index, day,
@@ -95,9 +96,9 @@ class TownsFolkStrategy(object):
 
 class SeerStrategy(TownsFolkStrategy):
 
-    def __init__(self, agent_indices, my_index, role_map, statusMap):
-        super().__init__(agent_indices, my_index, role_map)
-        
+    def __init__(self, agent_indices, my_index, role_map, statusMap, player_perspective):
+        super().__init__(agent_indices, my_index, role_map, player_perspective)
+
         self.my_index = my_index
         self._divined_agents = {}
 
@@ -118,7 +119,7 @@ class SeerStrategy(TownsFolkStrategy):
             print(self._divine_prospects)
         except Exception as e:
             print("ERRRORRRRR {}".format(e))
-        
+
         self._divined_agents[str(agent)] = species
         self.print_divined_agents()
 
@@ -139,10 +140,10 @@ class SeerStrategy(TownsFolkStrategy):
             score = 0
             agent_idx = int(agent)
             if (self._perspectives[agent_idx]._status == AgentStatus.DEAD_WEREWOLVES):
-                # If was attacked then definitly NOT a werewolf (if possessed then seer can't know anyhow)   
+                # If was attacked then definitly NOT a werewolf (if possessed then seer can't know anyhow)
                 if (agent not in self._divined_agents):
                     self.update_divine_result(agent, 'HUMAN')
-                
+
         # decide
         agent_to_divine = max(self._divine_prospects.keys(), key=(lambda key: self._divine_prospects[key]))
 

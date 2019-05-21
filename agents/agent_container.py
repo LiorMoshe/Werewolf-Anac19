@@ -7,7 +7,6 @@ from agents.possessed import Possessed
 
 NO_ROLE = 'none'
 
-
 class AgentContainer(object):
     """
     Because the agents role is decided in run time this class will contain an agent
@@ -18,6 +17,7 @@ class AgentContainer(object):
         self._role = role
         self._agent = None
         self._name = name
+        self.tasks = []
 
     def getName(self):
         return self._name

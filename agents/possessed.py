@@ -11,7 +11,7 @@ class Possessed(Villager, Werewolf):
         self._strategy = TownsFolkStrategy([i for i in range(1, self._game_settings._player_num)
                             if i != self._base_info._agentIndex],
                             self._base_info._agentIndex,
-                            self._base_info._role_map)
+                            self._base_info._role_map, self._player_perspective)
 
     def getName(self):
         return "Possessed"
@@ -34,5 +34,5 @@ class Possessed(Villager, Werewolf):
     def guard(self):
         pass
 
-    def extract_state_info(self, base_info):
+    def extract_state_info(self, base_info, diff_data, request):
         pass
