@@ -75,7 +75,8 @@ class Bodyguard(Villager):
     #     pass
 
     def guard(self):
-        return "1"
+        print("IN GUARD")
+        return self.non_tested_guard()
 
     def non_tested_guard(self):
         if self._player_perspective.agent_2_total_votes[self.player_id] >= self._game_settings._player_num / 2:
@@ -91,14 +92,15 @@ class Bodyguard(Villager):
         for id,agent_persp in self._strategy._perspectives.items():
             if agent_persp._status != AgentStatus.ALIVE or agent_persp._likely_role == GameRoles.WEREWOLF:
                 continue
-            if agent_persp.vote_score <= guard_score:
-                if (agent_id is None or agent_persp.under_risk_level>guard_risk):
-                    guard_score = agent_persp.vote_score
-                    guard_risk = agent_persp.under_risk_level
+            if agent_persp._vote_score <= guard_score:
+                risk_val = self._player_perspective.under_heat_value[id]
+                if (agent_id is None or risk_val>guard_risk):
+                    guard_score = agent_persp._vote_score
+                    guard_risk = risk_val
                     agent_id = id
                     eq_guard_score = []
                     eq_guard_score.append(id)
-                elif agent_persp.under_risk_level == guard_risk:
+                elif risk_val == guard_risk:
                     eq_guard_score.append(agent_id)
 
         if guard_score > 0: # Guarding myself is a better option
@@ -107,12 +109,13 @@ class Bodyguard(Villager):
             epsilon = 0.5
 
         self.last_guarded = np.random.choice([self.player_id, self.get_agent_id_2_guard(eq_guard_score)], p=[1-epsilon, epsilon])
+        print(self.last_guarded)
         return self.last_guarded
 
     def get_agent_id_2_guard(self, agent_ids):
         if len(agent_ids) == 1:
             return agent_ids[0]
-        return np.random.choice([agent_ids], p=np.ones(len(agent_ids))/len(agent_ids))
+        return np.random.choice(agent_ids, p=np.ones(len(agent_ids))/len(agent_ids))
 
     def extract_state_info(self, base_info, diff_data, request):
         # agent outvoted -> list of agents who voted against him
@@ -122,11 +125,11 @@ class Bodyguard(Villager):
             self.last_attacked = None
             for line_num, txt in enumerate(diff_data["text"]):
                 if txt == "dead":
-                    self.last_attacked = diff_data["agent"][line_num]
+                    self.last_attacked = diff_data.loc[line_num,"agent"]
                 elif txt == "vote":
                     try:
                         voted_agent = int(txt.split("[")[1][:-1])
-                        voted_agents.setdefault(voted_agent, []).append(diff_data["agent"][line_num])
+                        voted_agents.setdefault(voted_agent, []).append(diff_data.loc[line_num,"agent"])
                     except ValueError:
                         pass
             if voted_agent is not None and len(diff_data["text"]) >0 and self.last_attacked == None:

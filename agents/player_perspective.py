@@ -35,7 +35,7 @@ class PlayerPerspective(object):
             if txt == "vote":
                 try:
                     voted_agent = int(diff_data.loc[line_num,"text"].split("[")[1][:-1])
-                    voting_agent = diff_data["agent"][line_num]
+                    voting_agent = diff_data.loc[line_num,"agent"]
                     self.prev_votes_map[voted_agent][voting_agent] = self.prev_votes_map[voted_agent].setdefault(voting_agent, 0) + 1
                 except ValueError:
                     pass
