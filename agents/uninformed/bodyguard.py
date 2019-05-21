@@ -8,14 +8,13 @@ from agents.information_processing.agent_strategy import TownsFolkStrategy
 DEFAULT_MODE = 0
 RISK_MODE = 1
 POST_RISK_MODE = 2
-SUCC_GUARD = 3
-self_guard_score = None
 
 class Bodyguard(Villager):
     def __init__(self):
         self.last_guarded = None
         self.mode = DEFAULT_MODE
         self.last_attacked = None
+        self.self_guard_score = None
         #human,votelist tuple
         self.succ_guarded = []
 
@@ -38,8 +37,9 @@ class Bodyguard(Villager):
             msg1 = self.get_agent_strint(self.player_id) + " " +"AND ("+ cb.comingout(self.player_id, GameRoles.BODYGUARD)+")"
             for agent, voting_agents in self.succ_guarded:
                 msg1 += "AND (BECAUSE (AND ("+cb.guarded(agent)+")(NOT (ANY ATTACKED "+self.get_agent_strint(agent)+"))) ("+cb.comingout(agent, GameRoles.VILLAGER)+"))"
-
+            self.self_guard_score += -3
             self.mode = POST_RISK_MODE
+
 
         elif len(self.succ_guarded) > 0 and self.last_attacked == None:
             msg = self.get_agent_strint(self.player_id) + " BECAUSE ( AND "
@@ -75,14 +75,13 @@ class Bodyguard(Villager):
     #     pass
 
     def guard(self):
-        print("IN GUARD")
-        return self.non_tested_guard()
+        return "1" #self.non_tested_guard()
 
     def non_tested_guard(self):
         if self._player_perspective.agent_2_total_votes[self.player_id] >= self._game_settings._player_num / 2:
             return self.player_id
         agent_id = None
-        guard_score = np.inf if self_guard_score is None else self_guard_score
+        guard_score = np.inf if self.self_guard_score is None else self.self_guard_score
         guard_risk = 0
         eq_guard_score = []
         #TODO: IF NOBODY DIED IN THE ATTACK - ?
