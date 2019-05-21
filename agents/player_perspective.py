@@ -72,4 +72,4 @@ class PlayerPerspective(object):
             return
         role = msg.role if 'role' in fields else None
         if role is None or role == GameRoles.WEREWOLF:
-            self.under_hit_value[target] = self.update_potential_vote_data(subject, target, role)
+            self.under_heat_value[target] = self.update_potential_vote_data(subject, target, role)
