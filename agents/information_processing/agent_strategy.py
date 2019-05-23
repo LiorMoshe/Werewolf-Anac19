@@ -201,8 +201,6 @@ class SeerStrategy(TownsFolkStrategy):
                 del self._divine_prospects[dead_agent]
             except:
                 pass
-        
-        self.update_divine_result(agent, 'HUMAN')
 
         # decide
         agent_to_divine = max(self._divine_prospects.keys(), key=(lambda key: self._divine_prospects[key]))
@@ -215,6 +213,10 @@ class SeerStrategy(TownsFolkStrategy):
         likely_werewolves_in_cooperators = 0
         likely_humans_in_cooperators = 0
         for coop in perspective._cooperators:
+            # if i'm a cooperator
+            if (coop == self.my_index):
+                known_humans_in_cooperators += 1
+                continue
             # check if a known werewolf in cooperators
             if (str(coop) in self._divined_agents):
                 if (self._divined_agents[str(coop)] == SeerStrategy.WEREWOLF):
@@ -232,6 +234,10 @@ class SeerStrategy(TownsFolkStrategy):
         likely_werewolves_in_non_cooperators = 0
         likely_humans_in_non_cooperators = 0
         for noncoop in perspective._noncooperators:
+            # if i'm a noncooperator
+            if (noncoop == self.my_index):
+                known_humans_in_non_cooperators += 1
+                continue
             # check if a known werewolf in non cooperators
             if (str(noncoop) in self._divined_agents):
                 if (self._divined_agents[str(noncoop)] == SeerStrategy.WEREWOLF):
@@ -256,6 +262,22 @@ class SeerStrategy(TownsFolkStrategy):
     def talk(self):
         pass
 
+    def vote(self):
+        real_wolves = []
+        # check for actual wolves
+        for agent in self._divined_agents:
+            if (self._divine_prospects[agent] == SeerStrategy.WEREWOLF):
+                real_wolves.append(agent)
+        
+        # if we divined some wolves, pick the one with the highest score to be out
+        if (len(real_wolves) > 0):
+            highest_score = 0
+            for wolf in real_wolves:
+                # calculate chance
+                score = self._perspectives[int(wolf)]._vote_score
+                score += self._perspectives
+
+
 
 '''
 DIVINE STRATEGY
@@ -279,6 +301,7 @@ for each agent in prospects:
         how many likely humans in coopopertors: k * -0.1 
         how many likely wolfs in enemies: m * -0.1
 
+        check number of votes
 
         each day:
             0.4 * prev score + 0.6 * current score 
@@ -287,5 +310,15 @@ for each agent in prospects:
 TALK STRATEGY
 
 COMINGOUT / ESTIMATE - only if prior knowledge exists about werewolves
+
+VOTE STRATEGY
+
+check if a known werewolf in divined list, if so vote to the one with the highest
+chances to be executed.
+
+else, pick top 3 suspects in prospects and vote to the one with the highest chances
+to be executed.
+
+highest chance = known previous votes + risk 
 
 '''
