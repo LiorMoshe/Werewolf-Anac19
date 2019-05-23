@@ -7,6 +7,9 @@ from agents.logger import Logger
 from agents.game_roles import GameRoles
 
 
+MIN_SEVERITY_VAL = 1
+MAX_SEVERITY_VAL = 3
+
 class AgentStatus(Enum):
     ALIVE = 1
     DEAD_TOWNSFOLK = 2,
@@ -158,10 +161,13 @@ class AgentPerspective(object):
     TODO- If it's easier to be hostile, should everyone start as cooperator.
     """
 
-    def __init__(self, agent_idx, my_idx, sentences_container, role=None):
+    def __init__(self, agent_idx, my_idx, sentences_container, player_perspective, role=None):
         """
         :param agent_idx: Index of this agent.
         :param my_idx: Index of our agent.
+        :param sentences_container Container that maps talk number to a processed sentence.
+        :param player_perspective
+        :param role Role of the player if we know it from the role_map.
         """
         self._index = agent_idx
         self.my_agent = my_idx
@@ -172,13 +178,11 @@ class AgentPerspective(object):
         self._likely_role = None
         self._status = AgentStatus.ALIVE
         self._role = role
-        self.vote_score = 0
-        # Represent current agent's change to be voted out of the game
-        #TODO: implement setter + logic
-        self.under_risk_level = 0
+        self._vote_score = 0
         # Messages ordered by day that are directed to me (think these are only inquire and request messages).
         self.messages_to_me = {}
         self._sentences_container = sentences_container
+        self._player_perspective = player_perspective
 
     def get_index(self):
         return self._index
@@ -314,12 +318,15 @@ class AgentPerspective(object):
                 fondness = 3 if message.target == "ANY" else 1
                 result = self.update_cooperator(content, fondness=fondness)
 
+            self._player_perspective.msg_event(content, talk_number)
+
         elif content.type == SentenceType.AGREE or content.type == SentenceType.DISAGREE:
             scale = 4 if message.target == "ANY" else 2
             result = self.update_based_on_opinion(content, scale=scale)
         elif content.type == SentenceType.VOTE:
             hostility = 4 if message.target == "ANY" else 1.5
             result = self.update_non_cooperator(content, hostility=hostility)
+            self._player_perspective.msg_event(content, talk_number)
         elif content.type == SentenceType.DIVINE:
             hostility = 0.5 if message.target == "ANY" else 0.25
             result = self.update_non_cooperator(content, hostility=hostility)
@@ -389,6 +396,7 @@ class AgentPerspective(object):
         with the statement of the other agent it means that he supports him much highly then a single agreement.
         :return:
         """
+        result = None
         if message.type == SentenceType.AGREE:
             result = self.update_cooperator(message.referencedSentence, fondness=scale)
             in_hostility = self.update_non_cooperator
@@ -399,6 +407,7 @@ class AgentPerspective(object):
             in_fondness = self.update_non_cooperator
         processed_sentences = self._sentences_container.get_sentence(talk_number)
         self.reprocess_sentences(processed_sentences, in_hostility, in_fondness)
+        self._player_perspective.msg_event(message, talk_number)
         return result
 
     def update_because_sentence(self, message, talk_number, scale=1):
@@ -420,18 +429,21 @@ class AgentPerspective(object):
 
         if effect.type == SentenceType.VOTE:
             result = self.update_non_cooperator(effect, hostility=2 / scale)
+            self._player_perspective.msg_event(effect, talk_number)
         elif effect.type == SentenceType.DIVINE:
             result = self.update_non_cooperator(effect, hostility=1 / scale)
         elif effect.type == SentenceType.GUARD:
             result = self.update_cooperator(effect, fondness=1 / scale)
         elif effect.type == SentenceType.AGREE or effect.type == SentenceType.DISAGREE:
             result = self.update_based_on_opinion(effect, talk_number, scale=3)
+            self._player_perspective.msg_event(effect, talk_number)
         elif effect.type == SentenceType.ESTIMATE or effect.type == SentenceType.COMINGOUT:
             if GameRoles[effect.role] == GameRoles.WEREWOLF or GameRoles[effect.role] == GameRoles.POSSESSED:
                 result = self.update_non_cooperator(effect, hostility=4 / scale)
             else:
                 # If we estimate someone to not be in the werewolf team there is some fondness to it.
                 result = self.update_cooperator(effect, fondness=1 / scale)
+            self._player_perspective.msg_event(effect, talk_number)
         elif effect.type == SentenceType.REQUEST:
             result = self.update_based_on_request(effect, talk_number)
         elif effect.type == SentenceType.INQUIRE:
@@ -479,10 +491,12 @@ class AgentPerspective(object):
             elif GameRoles[message.role] == GameRoles.WEREWOLF or GameRoles[message.role] == GameRoles.POSSESSED:
                 result = self.update_non_cooperator(message, hostility=1 / scale)
 
+            self._player_perspective.msg_event(message, talk_number)
+
         elif message.type == SentenceType.VOTE:
-            print("Agent Idx: " + str(self._index) + " got vote: " + str(message))
-            Logger.instance.write("Agent Idx: " + str(self._index) + " got vote: " + str(message))
             result = self.update_non_cooperator(message, hostility=1.5 / scale)
+            self._player_perspective.msg_event(message, talk_number)
+
         elif message.type == SentenceType.REQUEST:
             result = self.update_based_on_request(message, talk_number)
         elif message.type == SentenceType.INQUIRE:
@@ -497,9 +511,11 @@ class AgentPerspective(object):
             result = self.update_based_on_or(message,  talk_number)
         elif message.type == SentenceType.NOT:
             self.update_based_on_not(message, talk_number)
+        elif message.type == SentenceType.AGREE or message.type == SentenceType.DISAGREE:
+            result = self.update_based_on_opinion(message, talk_number, scale)
 
         if result is not None:
-            self._sentences_container.add_sentence(talk_number, message)
+            self._sentences_container.add_sentence(talk_number, result)
 
     def update_based_on_not(self, message, talk_number):
         """
@@ -538,3 +554,7 @@ class AgentPerspective(object):
         for idx, enemy in self._noncooperators.items():
             Logger.instance.write(str(enemy))
 
+    def update_vote_score(self, value):
+        if abs(value) < MIN_SEVERITY_VAL or abs(value) > MAX_SEVERITY_VAL:
+            assert "Vote score value is out of bound"
+        self._vote_score += value

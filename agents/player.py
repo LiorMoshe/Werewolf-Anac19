@@ -1,6 +1,9 @@
 from abc import *
 from enum import Enum
+from agents.player_perspective import PlayerPerspective
+from agents.information_processing.agent_strategy import TownsFolkStrategy
 import numpy as np
+from enum import Enum
 
 REG_VOTE = 1
 RAND_VOTE = 2
@@ -169,7 +172,7 @@ class Player(ABC):
 
     @abstractmethod
     def getName(self):
-        return self.base_info.agentIndex if self.base_info is not None else ""
+        pass
 
     @abstractmethod
     def init_strategy(self, base_info, diff_data, game_setting):
@@ -188,7 +191,13 @@ class Player(ABC):
         """
         self._game_settings = GameSettings(game_setting)
         self._base_info = GameState(base_info)
-
+        self.player_id = base_info['agentIdx']
+        agents_idx = [i for i in range(1, self._game_settings._player_num+1)]
+        # # Initialize the agent belief builder.
+        # self._strategy = TownsFolkStrategy(agents_idx,
+        #                                    self._base_info._agentIndex,
+        #                                    self._base_info._role_map)
+        self._player_perspective = PlayerPerspective(agents_idx)
         # allow each player to choose its strategy when invoked
         self.init_strategy(base_info, diff_data, game_setting)
 
@@ -228,9 +237,11 @@ class Player(ABC):
         print(diff_data.to_string())
         if request == "WHISPER":
             print("Base info: ", base_info)
-
+        if request == "DAILY_FINISH":
+            self._player_perspective.end_of_day()
+        self._player_perspective.update(diff_data)
         self._strategy.update(diff_data)
-        self.extract_state_info(base_info)
+        self.extract_state_info(base_info, diff_data, request)
 
     def reg_vote(self):
         '''
@@ -260,6 +271,7 @@ class Player(ABC):
         # Draw agent_id - currently assume a non recursive structure
         np.random.choice([self._tasks[t_id].left, self._tasks[t_id].right],
                          p=[self._tasks[t_id].lweight, self._tasks[t_id].rweight])
+        self._tasks.pop(t_id)
 
     def get_best_vote_opt(self):
         '''
@@ -277,7 +289,9 @@ class Player(ABC):
         return agent_id
 
     def add_task(self, task, priority):
-        self._tasks[len(self._tasks)]= (priority, task)
+        id = len(self._tasks)
+        self._tasks[id]= (priority, task)
+        return id
 
     def get_task(self, id):
         return self._tasks[id]
