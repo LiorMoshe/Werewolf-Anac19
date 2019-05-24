@@ -1,6 +1,7 @@
 from agents.information_processing.agent_perspective import *
 from agents.information_processing.message_parsing import *
 from agents.information_processing.sentences_container import SentencesContainer
+from agents.information_processing.dissection.sentence_dissector import SentenceDissector
 import numpy as np 
 
 # These sentences currently, don't help us much (maybe will be used in future dev).
@@ -41,8 +42,11 @@ class TownsFolkStrategy(object):
         self._message_parser = MessageParser()
         self._sentences_container = SentencesContainer()
 
+        # Initialize the singleton sentences dissector.
+        SentenceDissector(self._sentences_container, my_index)
+
         for idx in agent_indices:
-            self._perspectives[idx] = AgentPerspective(idx, my_index, self._sentences_container, player_perspective,
+            self._perspectives[idx] = AgentPerspective(idx, my_index,
                                                        None if idx not in role_map.keys() else role_map[idx])
 
         # TODO - This is the model that will be implemented.
@@ -56,12 +60,12 @@ class TownsFolkStrategy(object):
         """
         for i in range(len(diff_data.index)):
             curr_index = diff_data.loc[i, 'agent']
-
-            if curr_index in self._perspectives.keys():
-                agent_sentence = diff_data.loc[i, 'text']
-                talk_number = diff_data.loc[i, 'idx']
-                message_type = MessageType[diff_data.loc[i, 'type'].upper()]
-                day = diff_data.loc[i, 'day']
+            agent_sentence = diff_data.loc[i, 'text']
+            idx = diff_data.loc[i, 'idx']
+            turn = diff_data.loc[i, 'turn']
+            day = diff_data.loc[i, 'day']
+            message_type = MessageType[diff_data.loc[i, 'type'].upper()]
+            talk_number = TalkNumber(day, turn, idx)
 
             # only seer and medium players will see
             # if message_type == MessageType.DIVINE:
@@ -77,8 +81,9 @@ class TownsFolkStrategy(object):
                                                                             talk_number)
                 if message_type == MessageType.TALK:
                     if agent_sentence not in UNUSEFUL_SENTENCES:
-                        self._perspectives[curr_index].update_perspective(parsed_sentence, talk_number)
+                        self._perspectives[curr_index].update_perspective(parsed_sentence, talk_number, day)
                 elif message_type == MessageType.VOTE:
+
                     self._perspectives[curr_index].update_vote(parsed_sentence)
                 elif message_type == MessageType.EXECUTE:
                     self._perspectives[curr_index].update_status(AgentStatus.DEAD_TOWNSFOLK)

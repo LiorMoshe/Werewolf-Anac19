@@ -15,5 +15,4 @@ class Logger(object):
 
     def __init__(self, file_name):
         if not Logger.instance:
-            print("CREATED LOGGER")
             Logger.instance = Logger.__Logger(file_name)
