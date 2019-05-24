@@ -4,13 +4,19 @@ class PlayerPerspective(object):
 
     def __init__(self, agent_indices):
         # Represent current agent's chance to be voted out of the game
-        self.agent_2_agents_negative_talk = {agent_idx: {} for agent_idx in agent_indices} # dictionary of agents -> dictionary of agents count of negative speaking in current turn
-        self.agent_2_agents_votes = {agent_idx: {} for agent_idx in agent_indices} # dictionary of agents -> dictionary of agents vote count
-
+        # dictionary of agents -> dictionary of agents count of negative speaking in current turn
+        self.agent_2_agents_negative_talk = {agent_idx: {} for agent_idx in agent_indices}
+        # dictionary of agents -> dictionary of agents vote count
+        self.agent_2_agents_votes = {agent_idx: {} for agent_idx in agent_indices}
+        # dictionary of agents -> dictionary of agents vote count from first turn until now(including)
         self.agent_2_prev_votes = {agent_idx: {} for agent_idx in agent_indices}
+        # map of agent->under_heat_value - heuristic value that represents  being under vote risk
         self.under_heat_value = {agent_idx:0 for agent_idx in agent_indices}
         self.talk_num_2_target = {}
+        # updates every diff_data of votes:
+        # map of agent -> total votes so far (from the beginning of the game)
         self.agent_2_total_votes = {agent_idx:0 for agent_idx in agent_indices}
+        # map of agent -> total votes this turn
         self.agent_2_total_votes_curr_turn = {agent_idx:0 for agent_idx in agent_indices}
 
     #based on msg - count
