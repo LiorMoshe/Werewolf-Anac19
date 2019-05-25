@@ -98,7 +98,7 @@ class Enemy(object):
     The hostility level will be discounted based on the number of days that have passed since it was last seen.
     """
 
-    def __init__(self, index, history={}):
+    def __init__(self, index, history):
         self.index = index
         self._hostility_history = history
         Logger.instance.write("Created new Enemy " + str(self.index) + "  initial history: " + str(self._hostility_history))

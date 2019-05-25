@@ -163,7 +163,7 @@ class AgentPerspective(object):
         :param vote:
         :return:
         """
-        enemy = Enemy(vote.target).update_hostility(hostility=4, message=vote)
+        enemy = Enemy(vote.target, history={}).update_hostility(hostility=4, message=vote)
         self.update_enemy(enemy)
 
     def lie_detected(self):
