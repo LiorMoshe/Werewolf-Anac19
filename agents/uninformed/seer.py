@@ -26,7 +26,7 @@ class Seer(Villager):
         return ""
 
     def vote(self):
-        return "1"
+        return self._strategy.vote()
 
     def attack(self):
         pass

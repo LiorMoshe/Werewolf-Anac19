@@ -56,20 +56,18 @@ class TownsFolkStrategy(object):
         """
         for i in range(len(diff_data.index)):
             curr_index = diff_data.loc[i, 'agent']
-
-            if curr_index in self._perspectives.keys():
-                agent_sentence = diff_data.loc[i, 'text']
-                talk_number = diff_data.loc[i, 'idx']
-                message_type = MessageType[diff_data.loc[i, 'type'].upper()]
-                day = diff_data.loc[i, 'day']
+            agent_sentence = diff_data.loc[i, 'text']
+            talk_number = diff_data.loc[i, 'idx']
+            message_type = MessageType[diff_data.loc[i, 'type'].upper()]
+            day = diff_data.loc[i, 'day']
 
             # only seer and medium players will see
-            # if message_type == MessageType.DIVINE:
-            #     print("DIVINE MESSAGE RECEIVED")
-            #     parsed_sentence = self._message_parser.process_sentence(agent_sentence, curr_index, day,
-            #                                                            talk_number)
-            #     # store divined results
-            #     self.update_divine_result(parsed_sentence.target, parsed_sentence.species)
+            if message_type == MessageType.DIVINE:
+                 print("DIVINE MESSAGE RECEIVED")
+                 parsed_sentence = self._message_parser.process_sentence(agent_sentence, curr_index, day,
+                                                                        talk_number)
+                 # store divined results
+                 self.update_divine_result(parsed_sentence.target, parsed_sentence.species)
 
             if curr_index in self._perspectives.keys():
                 if agent_sentence not in UNUSEFUL_SENTENCES:
@@ -106,7 +104,9 @@ class SeerStrategy(TownsFolkStrategy):
         'W_known_wolvss_noncoop': -0.2,
         'W_likely_wolves_noncoop': -0.1,
         'W_known_humans_noncoop': 0.2,
-        'W_likely_humans_noncoop': 0.2
+        'W_likely_humans_noncoop': 0.2,
+        'W_num_of_total_votes': 0.1,
+        'W_num_of_current_votes': 0.2
     }
 
     # convert the dict to weight vector
@@ -129,6 +129,8 @@ class SeerStrategy(TownsFolkStrategy):
         for agent in statusMap.keys():
             if (agent != my_index_str):
                 self._divine_prospects[agent] = 0
+        
+        self._player_perspective = player_perspective
 
     def update_divine_result(self, agent, species):
         # no longer a prospect
@@ -189,6 +191,9 @@ class SeerStrategy(TownsFolkStrategy):
             print("BEFORE {}".format(feature_vec))
             self.get_cooperators_non_cooperators_features(perspective, feature_vec)
             print("after {}".format(feature_vec))
+            
+            feature_vec[11] = self._player_perspective.agent_2_total_votes[agent_idx]
+            feature_vec[12] = self._player_perspective.agent_2_total_votes_curr_turn[agent_idx]
 
             # calculate the suspicious score
             score = feature_vec.dot(SeerStrategy.weights)
@@ -202,6 +207,11 @@ class SeerStrategy(TownsFolkStrategy):
             except:
                 pass
 
+        
+        # if somehow the prospect list is empty
+        if (len(self._divine_prospects.keys()) == 0):
+            return str(1)
+        
         # decide
         agent_to_divine = max(self._divine_prospects.keys(), key=(lambda key: self._divine_prospects[key]))
 
@@ -262,22 +272,48 @@ class SeerStrategy(TownsFolkStrategy):
     def talk(self):
         pass
 
+    def get_likely_to_be_voted(self, agents_list):
+        highest_score = 0
+        vote_id = -1
+        for agent in agents_list:
+            # calculate chance
+            score = self._player_perspective.agent_2_total_votes[int(agent)]
+            heat = self._player_perspective.under_heat_value[int(agent)]
+            if (heat is None):
+                heat = 0
+            
+            score += heat
+            # update vote score for each of the wolves
+            self._perspectives[int(agent)]._vote_score = score 
+            if (highest_score <= score):
+                highest_score = score
+                vote_id = agent
+
+        print("****** vote to {} *******".format(vote_id))
+        return str(vote_id)
+
+
     def vote(self):
         real_wolves = []
         # check for actual wolves
         for agent in self._divined_agents:
-            if (self._divine_prospects[agent] == SeerStrategy.WEREWOLF):
+            if (self._divined_agents[agent] == SeerStrategy.WEREWOLF):
                 real_wolves.append(agent)
         
         # if we divined some wolves, pick the one with the highest score to be out
         if (len(real_wolves) > 0):
-            highest_score = 0
-            for wolf in real_wolves:
-                # calculate chance
-                score = self._perspectives[int(wolf)]._vote_score
-                score += self._perspectives
+            print("*****likely wolves.********")
+            return self.get_likely_to_be_voted(real_wolves)
+        else:
+            # no divined wolves
+            print("*****no divined wolves.********")
+            from collections import Counter
+            counter = Counter(self._divine_prospects)
+            top_3_suspects = counter.most_common(3)
+            print("SUSPECTS {}".format(top_3_suspects))
+            top_3_suspects = [agent for agent, score in top_3_suspects]
 
-
+            return self.get_likely_to_be_voted(top_3_suspects)
 
 '''
 DIVINE STRATEGY
@@ -302,6 +338,8 @@ for each agent in prospects:
         how many likely wolfs in enemies: m * -0.1
 
         check number of votes
+
+        how many agents voted for this agent this turn
 
         each day:
             0.4 * prev score + 0.6 * current score 
