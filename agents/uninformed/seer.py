@@ -1,5 +1,6 @@
 from agents.uninformed.villager import Villager
-from agents.information_processing.agent_strategy import SeerStrategy
+from agents.information_processing.strategies.SeerStrategy import SeerStrategy
+import time
 
 class Seer(Villager):
 
@@ -26,13 +27,21 @@ class Seer(Villager):
         return ""
 
     def vote(self):
-        return self._strategy.vote()
+        start = time.time()
+        v = self._strategy.vote()
+        end = time.time() - start
+        print ("VOTE TIME {} ms".format(int(end * 1000)))
+        return v
 
     def attack(self):
         pass
 
     def divine(self):
-        return self._strategy.get_next_divine()
+        start = time.time()
+        d = self._strategy.get_next_divine()
+        end = time.time() - start
+        print ("DIVINE TIME {} ms".format(int(end * 1000)))
+        return d
 
     def guard(self):
         pass
