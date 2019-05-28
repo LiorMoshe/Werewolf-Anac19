@@ -35,5 +35,5 @@ class Medium(Villager):
     def guard(self):
         pass
 
-    def extract_state_info(self, base_info):
+    def extract_state_info(self, base_info, diff_data, request):
         pass
