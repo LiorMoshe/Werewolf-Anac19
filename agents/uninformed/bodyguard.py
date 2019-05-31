@@ -3,7 +3,7 @@ from agents.information_processing.agent_perspective import AgentStatus
 import aiwolfpy.contentbuilder as cb
 from agents.game_roles import GameRoles
 import numpy as np
-from agents.information_processing.agent_strategy import TownsFolkStrategy
+from agents.strategies.agent_strategy import TownsFolkStrategy
 
 DEFAULT_MODE = 0
 RISK_MODE = 1

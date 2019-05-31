@@ -1,5 +1,5 @@
 from agents.informed.informed import Informed
-from agents.information_processing.agent_strategy import TownsFolkStrategy
+from agents.strategies.agent_strategy import TownsFolkStrategy
 
 class Werewolf(Informed):
 

@@ -1,6 +1,6 @@
 from agents.uninformed.villager import Villager
 from agents.informed.werewolf import Werewolf
-from agents.information_processing.agent_strategy import TownsFolkStrategy
+from agents.strategies.agent_strategy import TownsFolkStrategy
 
 class Possessed(Villager, Werewolf):
 

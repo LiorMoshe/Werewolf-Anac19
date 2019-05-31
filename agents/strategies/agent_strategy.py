@@ -1,7 +1,8 @@
 from agents.information_processing.agent_perspective import *
 from agents.information_processing.message_parsing import *
 from agents.information_processing.sentences_container import SentencesContainer
-from agents.information_processing.group_finder import  GroupFinder
+from agents.information_processing.graph_utils.group_finder import  GroupFinder
+from agents.information_processing.graph_utils.visualization import visualize
 from agents.information_processing.dissection.sentence_dissector import SentenceDissector
 import numpy as np
 
@@ -61,6 +62,8 @@ class TownsFolkStrategy(object):
         :return:
         """
         self._group_finder.clean_groups()
+        day = None
+        message_type = None
         for i in range(len(diff_data.index)):
             curr_index = diff_data.loc[i, 'agent']
             agent_sentence = diff_data.loc[i, 'text']
@@ -69,6 +72,7 @@ class TownsFolkStrategy(object):
             day = diff_data.loc[i, 'day']
             message_type = MessageType[diff_data.loc[i, 'type'].upper()]
             talk_number = TalkNumber(day, turn, idx)
+            Logger.instance.write("Got sentence: " + str(agent_sentence) + " from agent " + str(curr_index)  + '\n')
 
             # only seer and medium players will see
             # if message_type == MessageType.DIVINE:
@@ -97,11 +101,17 @@ class TownsFolkStrategy(object):
                     print("Got whisper when I am in townsfolk, BUG.")
                 elif message_type == MessageType.FINISH:
                     self._perspectives[curr_index].update_real_role(parsed_sentence.role)
+                    self._group_finder.set_player_role(curr_index, parsed_sentence.role)
                 self._perspectives[curr_index].switch_sides(day)
                 self._perspectives[curr_index].log_perspective()
 
-        self._group_finder.find_groups(self._perspectives)
-        self._group_finder.log_groups()
+        game_graph = self._group_finder.find_groups(self._perspectives, day)
+        game_graph.log()
+
+        if message_type == MessageType.FINISH:
+            visualize(game_graph)
+
+        # self._group_finder.log_groups()
 
 
 
@@ -151,9 +161,9 @@ class SeerStrategy(TownsFolkStrategy):
         for agent in self._divine_prospects:
             score = 0
             agent_idx = int(agent)
-            if (self._perspectives[agent_idx]._status == AgentStatus.DEAD_WEREWOLVES):
+            if self._perspectives[agent_idx]._status == AgentStatus.DEAD_WEREWOLVES:
                 # If was attacked then definitly NOT a werewolf (if possessed then seer can't know anyhow)
-                if (agent not in self._divined_agents):
+                if agent not in self._divined_agents:
                     self.update_divine_result(agent, 'HUMAN')
 
         # decide

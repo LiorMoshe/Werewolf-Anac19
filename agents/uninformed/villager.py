@@ -1,5 +1,5 @@
 from agents.uninformed.uninformed import Uninformed
-from agents.information_processing.agent_strategy import TownsFolkStrategy
+from agents.strategies.agent_strategy import TownsFolkStrategy
 
 class Villager(Uninformed):
 

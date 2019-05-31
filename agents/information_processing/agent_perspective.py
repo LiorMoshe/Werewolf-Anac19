@@ -166,11 +166,17 @@ class AgentPerspective(object):
         enemy = Enemy(vote.target, history={}).update_hostility(hostility=4, message=vote)
         self.update_enemy(enemy)
 
-    def get_cooperators(self):
+    def get_cooperators_indices(self):
         return list(self._cooperators.keys())
 
-    def get_enemies(self):
+    def get_enemies_indices(self):
         return list(self._noncooperators.keys())
+
+    def get_cooperators(self):
+        return self._cooperators
+
+    def get_enemies(self):
+        return self._noncooperators
 
     def lie_detected(self):
         """
