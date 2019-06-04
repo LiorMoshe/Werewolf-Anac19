@@ -27,7 +27,8 @@ class MessageType(Enum):
     ATTACK = 6,
     WHISPER = 7,
     FINISH = 8,
-    DIVINE = 9
+    DIVINE = 9,
+    REQUEST = 10
 
 
 class TownsFolkStrategy(object):

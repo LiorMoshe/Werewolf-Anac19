@@ -3,8 +3,9 @@ from agents.information_processing.message_parsing import *
 from agents.information_processing.sentences_container import SentencesContainer
 from agents.game_roles import GameRoles
 from agents.information_processing.dissection.sentence_dissector import SentenceDissector
-from agents.information_processing.agent_strategy import TownsFolkStrategy
+from agents.information_processing.agent_strategy import TownsFolkStrategy, MessageType
 import numpy as np 
+import pandas as pd
 
 class SeerStrategy(TownsFolkStrategy):
     weights_dict = {
@@ -20,7 +21,8 @@ class SeerStrategy(TownsFolkStrategy):
         'W_known_humans_noncoop': 0.2,
         'W_likely_humans_noncoop': 0.2,
         'W_num_of_total_votes': 0.1,
-        'W_num_of_current_votes': 0.2
+        'W_num_of_current_votes': 0.2,
+        'W_was_requested': 0.2
     }
 
     # convert the dict to weight vector
@@ -30,6 +32,8 @@ class SeerStrategy(TownsFolkStrategy):
     WEREWOLF = "WEREWOLF"
 
     DECAY_FACTOR = 0.9
+    PROB_OF_REVEAL = 0.7
+    PROB_OF_REVEAL_ALL = 0.4
 
     def __init__(self, agent_indices, my_index, role_map, statusMap, player_perspective):
         super().__init__(agent_indices, my_index, role_map, player_perspective)
@@ -39,6 +43,9 @@ class SeerStrategy(TownsFolkStrategy):
         self.day_num = 0
 
         self.is_first_day = True
+
+        # agents that other agents requested them to be divined
+        self.requested_divine = {}
 
         # create prospect map {agent Idx -> suspicious score}
         self._divine_prospects = {}
@@ -111,6 +118,8 @@ class SeerStrategy(TownsFolkStrategy):
             
             feature_vec[11] = self._player_perspective.agent_2_total_votes[agent_idx]
             feature_vec[12] = self._player_perspective.agent_2_total_votes_curr_turn[agent_idx]
+            if (agent_idx in self.requested_divine):
+                feature_vec[13] = 1
             print("agent {}  {}".format(agent_idx, feature_vec))
             # calculate the suspicious score
             score = feature_vec.dot(SeerStrategy.weights)
@@ -126,6 +135,7 @@ class SeerStrategy(TownsFolkStrategy):
             except:
                 pass
 
+        self.requested_divine.clear()
         
         # if somehow the prospect list is empty
         if (len(self._divine_prospects.keys()) == 0):
@@ -190,7 +200,50 @@ class SeerStrategy(TownsFolkStrategy):
         feature_vec[10] = likely_humans_in_non_cooperators
 
     def talk(self):
-        pass
+        if (self._player_perspective.under_heat_value[self.my_index] > 0.7):
+            # comingout as seer
+            return "COMINGOUT Agent[{}] SEER".format(self.my_index)
+
+        coin = np.random.rand()
+
+        # whether to reveal info
+        if (coin < SeerStrategy.PROB_OF_REVEAL):
+            # check to see if there is a known werewolf
+            if (SeerStrategy.WEREWOLF in self._divined_agents.values()):
+                werewolves = [(key, value, self._player_perspective.under_heat_value[int(key)]) for key, value in self._divined_agents.items() if value == SeerStrategy.WEREWOLF]
+                # get the prospect with the most heat
+                prospect = max(werewolves, key=lambda item: item[2])
+
+                coin = np.random.rand()
+
+                # convince a known human to believe that prospect is a werewolf
+                if (coin > SeerStrategy.PROB_OF_REVEAL_ALL):
+                    if (SeerStrategy.HUMAN in self._divined_agents.values()):
+                        humans = [key for key, value in self._divined_agents.values() if value == SeerStrategy.HUMAN]
+                        
+                        target = np.random.choice(humans)
+                    else:
+                        # find a non cooperator and convince them to believe that prospect is a werewolf
+                        target = self.get_non_cooperator(int(prospect))
+                    
+                    return "REQUEST Agent[{}] (ESTIMATE Agent[{}] WEREWOLF)".format(target, prospect)
+                else:
+                    # tell everybody about prospect
+                    return "REQUEST ANY (ESTIMATE Agent[{}] WEREWOLF)".format(prospect)
+        else:
+            return "skip"
+
+    def get_non_cooperator(self, agent):
+        for agent_idx in self._perspectives:
+            non_cooperators = self._perspectives[agent_idx]._noncooperators
+
+            if (agent in non_cooperators):
+                return agent_idx
+
+        # otherwise return a random agent 
+        agents = set(self._divine_prospects.keys()) - set(agent)
+
+        return np.random.choice(list(agents))
 
     def get_likely_to_be_voted(self, agents_list):
         highest_score = 0
@@ -236,6 +289,20 @@ class SeerStrategy(TownsFolkStrategy):
 
             return self.get_likely_to_be_voted(top_3_suspects)
 
+    def digest_sentences(self, diff_data):
+        for i, row in diff_data.iterrows():
+            # look for requests
+            if ("REQUEST" in row["text"] and "DIVINATION" in row["text"]):
+                agent_to_divine = row["text"].split("DIVINATION")[1]
+                start = "Agent["
+                end = "]"
+                agent_to_divine = int(agent_to_divine[agent_to_divine.find(start) + len(start):agent_to_divine.rfind(end)])
+
+                print("request for divine agent {}".format(agent_to_divine))
+
+                self.requested_divine[agent_to_divine] = None
+                 
+
 '''
 DIVINE STRATEGY
 for each agent in prospects:
@@ -268,7 +335,11 @@ for each agent in prospects:
 
 TALK STRATEGY
 
-COMINGOUT / ESTIMATE - only if prior knowledge exists about werewolves
+COMINGOUT / ESTIMATE - only if prior knowledge exists about werewolves:
+    1. either speak out loud to everyone:
+        REQUEST ANY (ESTIMATE Agent1 [role])
+    2. request known humans to change their mind about certain players :
+        REQUEST Agent1 (ESTIMATE Agent2 [role])
 COMINGOUT as seer only if my risk of being voted out is high
 
 check for inquries or requests of divine, if so add a special feature (1 if an agent
