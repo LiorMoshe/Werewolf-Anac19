@@ -15,13 +15,7 @@ class Seer(Villager):
 
     def talk(self):
         print("Called  TALK")
-        if self._base_info.is_alive(1):
-            return "REQUEST Agent[01] (DIVINATION Agent[02])"
-            #return "COMINGOUT Agent[01] WEREWOLF"
-        elif self._base_info.is_alive(2):
-            return "COMINGOUT Agent[02] WEREWOLF"
-        elif self._base_info.is_alive(3):
-            return "COMINGOUT Agent[03] WEREWOLF"
+        return self._strategy.talk()
 
     def whisper(self):
         return ""
@@ -39,6 +33,5 @@ class Seer(Villager):
         pass
 
     def extract_state_info(self, base_info, diff_data, request):
-        print("123123123")
         self._strategy.digest_sentences(diff_data)
 

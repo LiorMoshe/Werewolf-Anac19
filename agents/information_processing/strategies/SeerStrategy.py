@@ -56,6 +56,8 @@ class SeerStrategy(TownsFolkStrategy):
         
         self._player_perspective = player_perspective
 
+        self._skip_counter = 0
+
     def update_divine_result(self, agent, species):
         # no longer a prospect
         try:
@@ -202,48 +204,77 @@ class SeerStrategy(TownsFolkStrategy):
     def talk(self):
         if (self._player_perspective.under_heat_value[self.my_index] > 0.7):
             # comingout as seer
-            return "COMINGOUT Agent[{}] SEER".format(self.my_index)
+            return "COMINGOUT Agent[{0:02d}] SEER".format(self.my_index)
 
         coin = np.random.rand()
-
+        
+        is_werewolf_detected = SeerStrategy.WEREWOLF in self._divined_agents.values()
         # whether to reveal info
-        if (coin < SeerStrategy.PROB_OF_REVEAL):
+        if (coin < SeerStrategy.PROB_OF_REVEAL and is_werewolf_detected):
             # check to see if there is a known werewolf
-            if (SeerStrategy.WEREWOLF in self._divined_agents.values()):
-                werewolves = [(key, value, self._player_perspective.under_heat_value[int(key)]) for key, value in self._divined_agents.items() if value == SeerStrategy.WEREWOLF]
-                # get the prospect with the most heat
-                prospect = max(werewolves, key=lambda item: item[2])
+            werewolves = [(key, value, self._player_perspective.under_heat_value[int(key)]) for key, value in self._divined_agents.items() if value == SeerStrategy.WEREWOLF]
+            # get the prospect with the most heat
+            prospect, val, heat = max(werewolves, key=lambda item: item[2])
 
-                coin = np.random.rand()
+            prospect = int(prospect)
 
-                # convince a known human to believe that prospect is a werewolf
-                if (coin > SeerStrategy.PROB_OF_REVEAL_ALL):
-                    if (SeerStrategy.HUMAN in self._divined_agents.values()):
-                        humans = [key for key, value in self._divined_agents.values() if value == SeerStrategy.HUMAN]
-                        
-                        target = np.random.choice(humans)
-                    else:
-                        # find a non cooperator and convince them to believe that prospect is a werewolf
-                        target = self.get_non_cooperator(int(prospect))
+            coin = np.random.rand()
+
+            # convince a known human to believe that prospect is a werewolf
+            if (coin > SeerStrategy.PROB_OF_REVEAL_ALL):
+                if (SeerStrategy.HUMAN in self._divined_agents.values()):
+                    humans = [key for key, value in self._divined_agents.items() if value == SeerStrategy.HUMAN]
                     
-                    return "REQUEST Agent[{}] (ESTIMATE Agent[{}] WEREWOLF)".format(target, prospect)
+                    # check if one of the humans is in prospect's non cooperators
+                    target = self.get_target(prospect, humans, self._perspectives[prospect]._noncooperators)
+
+                    if (target is not None):
+                        print("chose non cooperator")
+                        return "REQUEST Agent[{0:02d}] ".format(target) + "(ESTIMATE Agent[{0:02d}] WEREWOLF)".format(prospect)
+
+                    # check if one of the humans is in prospect's cooperators
+                    target = self.get_target(prospect, humans, self._perspectives[prospect]._cooperators)
+
+                    if (target is not None):
+                        print("chose cooperator")
+                        return "REQUEST Agent[{0:02d}] ".format(target) + "(ESTIMATE Agent[{0:02d}] WEREWOLF)".format(prospect)
+
+                    # else - send to random human
+                    target = str(np.random.choice(humans))
+                    print("chose random")
+                    return "REQUEST Agent[{0:02d}] ".format(target) + "(ESTIMATE Agent[{0:02d}] WEREWOLF)".format(prospect)
                 else:
-                    # tell everybody about prospect
-                    return "REQUEST ANY (ESTIMATE Agent[{}] WEREWOLF)".format(prospect)
+                    # no humans
+                    print("chose everybody")
+                    return "REQUEST ANY (ESTIMATE Agent[{0:02d}] WEREWOLF)".format(prospect)
+            else:
+                # tell everybody about prospect
+                print("chose everybody")
+                return "REQUEST ANY (ESTIMATE Agent[{0:02d}] WEREWOLF)".format(prospect)
         else:
-            return "skip"
+            # not revealing information but we are aware of werewolves
+            if (is_werewolf_detected):
+                print("not revealing but werewolves exist")
+                return self.choose_random_sentence(werewolves_exist=True)
+            else:
+                print("not revealing no werewolves")
+                return self.choose_random_sentence()
 
-    def get_non_cooperator(self, agent):
-        for agent_idx in self._perspectives:
-            non_cooperators = self._perspectives[agent_idx]._noncooperators
+    def choose_random_sentence(self, werewolves_exist=False):
+        if (werewolves_exist):
+            sentences = ["Skip"]
+        else:
+            sentences = ["Skip", "Over"]
 
-            if (agent in non_cooperators):
-                return agent_idx
+        return np.random.choice(sentences)
 
-        # otherwise return a random agent 
-        agents = set(self._divine_prospects.keys()) - set(agent)
-
-        return np.random.choice(list(agents))
+    def get_target(self, agent, known_humans, agent_dict):
+        ls = []
+        for human in known_humans:
+            if (int(human) in agent_dict):
+                ls.append(int(human))
+        
+        return int(np.random.choice(ls))
 
     def get_likely_to_be_voted(self, agents_list):
         highest_score = 0
@@ -301,7 +332,19 @@ class SeerStrategy(TownsFolkStrategy):
                 print("request for divine agent {}".format(agent_to_divine))
 
                 self.requested_divine[agent_to_divine] = None
-                 
+
+            # look for liars / agents that pretend to be me
+            if (len(row["text"].split()) == 3 and "COMINGOUT" in row["text"] and "SEER" in row["text"]):
+                agent = int(row['agent'])
+                tmp_str = row["text"]
+                start = "COMINGOUT Agent["
+                end = "]"
+                pretender = int(tmp_str[tmp_str.find(start) + len(start):tmp_str.rfind(end)])
+
+                print("PRETENDER {} {}".format(agent, pretender))
+                if (agent == pretender and agent != self.my_index):
+                    self._perspectives[agent].lie_detected()
+
 
 '''
 DIVINE STRATEGY
