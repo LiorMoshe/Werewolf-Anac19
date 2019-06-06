@@ -4,6 +4,7 @@ from agents.information_processing.sentences_container import SentencesContainer
 from agents.information_processing.graph_utils.group_finder import  GroupFinder
 from agents.information_processing.graph_utils.visualization import visualize
 from agents.information_processing.dissection.sentence_dissector import SentenceDissector
+from agents.states.day_one import DayOne
 import numpy as np
 
 # These sentences currently, don't help us much (maybe will be used in future dev).
@@ -42,10 +43,12 @@ class TownsFolkStrategy(object):
     def __init__(self, agent_indices, my_index, role_map, player_perspective):
         self._perspectives = {}
         self._message_parser = MessageParser()
-        self._sentences_container = SentencesContainer()
+
+        # Initialize the sentences container singleton
+        SentencesContainer()
 
         # Initialize the singleton sentences dissector.
-        SentenceDissector(self._sentences_container, my_index)
+        SentenceDissector(my_index)
 
         for idx in agent_indices:
             self._perspectives[idx] = AgentPerspective(idx, my_index,
@@ -53,6 +56,7 @@ class TownsFolkStrategy(object):
 
         # TODO - This is the model that will be implemented.
         self._model = None
+        self._agent_state = DayOne(my_index, agent_indices)
         self._group_finder = GroupFinder(agent_indices + [my_index])
 
     def update(self, diff_data):
@@ -84,6 +88,7 @@ class TownsFolkStrategy(object):
 
             if curr_index in self._perspectives.keys():
                 if agent_sentence not in UNUSEFUL_SENTENCES:
+                    Logger.instance.write("Got Sentence: " + agent_sentence + '\n')
                     parsed_sentence = self._message_parser.process_sentence(agent_sentence, curr_index, day,
                                                                             talk_number)
                 if message_type == MessageType.TALK:
@@ -108,11 +113,15 @@ class TownsFolkStrategy(object):
         game_graph = self._group_finder.find_groups(self._perspectives, day)
         game_graph.log()
 
+        # Note: In case you try running several games together you cant use the visualization.
         if message_type == MessageType.FINISH:
             visualize(game_graph)
+            SentencesContainer.instance.clean()
 
-        # self._group_finder.log_groups()
-
+    def talk(self):
+        sentence =  self._agent_state.talk()
+        Logger.instance.write("I Said: " + sentence)
+        return sentence
 
 
 

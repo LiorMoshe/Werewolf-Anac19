@@ -6,6 +6,9 @@ class Species(Enum):
     HUMANS = 1,
     WEREWOLVES = 2
 
+# Just because we hate magic numbers
+DAY_STRING_LENGTH = len("Day")
+
 def append_zero(num, required_digits=1):
     """
     Given a number append a zero to it if it has a single digit, used for the talk number's
@@ -27,6 +30,16 @@ class TalkNumber(object):
     def __str__(self):
         return "Day" + append_zero(self.day) + " " + append_zero(self.talk_turn) + "[" + \
                    str(append_zero(self.idx, required_digits=2)) + "]"
+
+    @staticmethod
+    def is_on_day(talk_number, day):
+        """
+        Given string representation of a talk number check if it's on a given day.
+        :param talk_number:
+        :param day:
+        :return:
+        """
+        return talk_number.split(' ', 1)[0][DAY_STRING_LENGTH:]
 
     def __eq__(self, other):
         return self.day == other.day and self.idx == other.idx and self.talk_turn == other.talk_turn

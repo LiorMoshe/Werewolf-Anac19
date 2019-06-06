@@ -47,7 +47,6 @@ def visualize(game_graph):
             # if edge.from_index or edge.to_index in covered:
             #     continue
 
-            print("Got undirecrted")
             edge_labels[edge.from_index, edge.to_index] = '<' + str(edge.weight) + '>'
             graph.add_edge(edge.from_index, edge.to_index, weight=edge.weight, color='orange' if edge.type == EdgeType.HATE else 'green')
 

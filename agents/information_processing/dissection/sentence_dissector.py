@@ -2,6 +2,7 @@ from collections import namedtuple
 from agents.information_processing.dissection.player_representation import Enemy, Cooperator
 from agents.information_processing.message_parsing import *
 from agents.game_roles import GameRoles
+from agents.information_processing.sentences_container import SentencesContainer
 
 
 class DissectedSentence(object):
@@ -51,8 +52,7 @@ class SentenceDissector(object):
 
     class __SentenceDissector(object):
 
-        def __init__(self, sentences_container, my_agent):
-            self._sentences_container = sentences_container
+        def __init__(self, my_agent):
             self.my_agent = my_agent
 
         def dissect_sentence(self, message, talk_number, day,  scale=1, save_dissection=True):
@@ -92,7 +92,7 @@ class SentenceDissector(object):
                 self.update_based_on_not(message, talk_number, result)
 
             if save_dissection:
-                self._sentences_container.add_sentence(result)
+                SentencesContainer.instance.add_sentence(result)
 
             return result
 
@@ -175,7 +175,6 @@ class SentenceDissector(object):
             :return:
             """
             scale = len(message.sentences)
-            # result = None
             for sentence in message.sentences:
                 sentence._replace(reason=reason)
 
@@ -231,7 +230,7 @@ class SentenceDissector(object):
                 in_fondness = lambda main_sentence, sub_sentence, amount: main_sentence.update_enemy(
                     self.create_enemy(sub_sentence, hostility=amount))
 
-            processed_sentence = self._sentences_container.get_sentence(talk_number)
+            processed_sentence = SentencesContainer.instance.get_sentence(talk_number)
             self.reprocess_sentence(processed_sentence, dissected_sentence, in_hostility, in_fondness)
 
         def update_because_sentence(self, message, talk_number, dissected_sentence, scale=1):
@@ -338,6 +337,6 @@ class SentenceDissector(object):
             
     instance = None
 
-    def __init__(self, sentences_container, my_agent):
+    def __init__(self, my_agent):
         if not SentenceDissector.instance:
-            SentenceDissector.instance = SentenceDissector.__SentenceDissector(sentences_container, my_agent)
+            SentenceDissector.instance = SentenceDissector.__SentenceDissector(my_agent)
