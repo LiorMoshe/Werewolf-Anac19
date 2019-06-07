@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import random
-from agents.sentence_pools.question_pool import *
+from agents.sentence_generators.question_pool import *
 from agents.information_processing.sentences_container import SentencesContainer
 from agents.game_roles import GameRoles
 
@@ -79,6 +79,18 @@ class AgentState(ABC):
         params["role"] = random.choice(list(GameRoles))
 
         return random.choice(question_pool)(**params)
+
+    def ask_unique_random_question(self):
+        """
+        We don't want to accidently repeat ourselves, this function makes sure we ask
+        a question that wasn't said before.
+        :return:
+        """
+        question = self.ask_random_question()
+        while self.check_sentence_said_before(question):
+            question = self.ask_random_question()
+
+        return question
 
 
 

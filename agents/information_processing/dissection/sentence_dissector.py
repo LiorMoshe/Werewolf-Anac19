@@ -3,6 +3,7 @@ from agents.information_processing.dissection.player_representation import Enemy
 from agents.information_processing.message_parsing import *
 from agents.game_roles import GameRoles
 from agents.information_processing.sentences_container import SentencesContainer
+from agents.logger import Logger
 
 
 class DissectedSentence(object):
@@ -340,3 +341,14 @@ class SentenceDissector(object):
     def __init__(self, my_agent):
         if not SentenceDissector.instance:
             SentenceDissector.instance = SentenceDissector.__SentenceDissector(my_agent)
+
+if __name__ == "__main__":
+    # Mini-test for our code.
+    SentenceDissector(10)
+    Logger("log.txt")
+    SentencesContainer()
+    message_parser = MessageParser()
+    message = message_parser.process_sentence("COMINGOUT Agent[8] POSSESSED", 8, 1, TalkNumber(1, 10, 10))
+
+    res = SentenceDissector.instance.dissect_sentence(message, TalkNumber(1, 10, 10), 1)
+    print(res)

@@ -1,6 +1,6 @@
 from collections import namedtuple
 from enum import Enum
-
+from math import ceil, floor
 
 class Species(Enum):
     HUMANS = 1,
@@ -9,7 +9,7 @@ class Species(Enum):
 # Just because we hate magic numbers
 DAY_STRING_LENGTH = len("Day")
 
-def append_zero(num, required_digits=1):
+def append_zero(num, required_digits=2):
     """
     Given a number append a zero to it if it has a single digit, used for the talk number's
     string format.
@@ -17,7 +17,7 @@ def append_zero(num, required_digits=1):
     :param required_digits
     :return:
     """
-    return "0" * (required_digits - int(num / (10  ** required_digits))) + str(num)
+    return "0" * (required_digits - len(str(num))) + str(num)
 
 
 class TalkNumber(object):
@@ -29,7 +29,7 @@ class TalkNumber(object):
 
     def __str__(self):
         return "Day" + append_zero(self.day) + " " + append_zero(self.talk_turn) + "[" + \
-                   str(append_zero(self.idx, required_digits=2)) + "]"
+                   str(append_zero(self.idx, required_digits=3)) + "]"
 
     @staticmethod
     def is_on_day(talk_number, day):
@@ -392,11 +392,13 @@ class MessageParser(object):
 
 
 if __name__ == "__main__":
-    test = "AND (DAY 1 (Agent[03] DIVINED Agent[04] HUMAN)) (DAY 2 (Agent[03] DIVINED Agent[02] HUMAN))"
-    test2 = "BECAUSE (DAY 2 (Agent[10] DIVINED Agent[06] WEREWOLF)) (REQUEST ANY (VOTE Agent[06]))"
-    test3 = "REQUEST ANY (VOTE Agent[06])"
-    test4 = "BECAUSE (AND (COMINGOUT Agent[04] VILLAGER) (DAY 3 (Agent[10] DIVINED Agent[04] WEREWOLF))) (XOR (ESTIMATE Agent[10] WEREWOLF) (ESTIMATE Agent[10] POSSESSED))"
-    test5 = "DAY 1 (Agent[11] DIVINED Agent[10] WEREWOLF)"
-    parser = MessageParser()
-    res = parser.process_sentence(test5, agent_index=2, day=3, talk_number=4)
-    print(res)
+    # test = "AND (DAY 1 (Agent[03] DIVINED Agent[04] HUMAN)) (DAY 2 (Agent[03] DIVINED Agent[02] HUMAN))"
+    # test2 = "BECAUSE (DAY 2 (Agent[10] DIVINED Agent[06] WEREWOLF)) (REQUEST ANY (VOTE Agent[06]))"
+    # test3 = "REQUEST ANY (VOTE Agent[06])"
+    # test4 = "BECAUSE (AND (COMINGOUT Agent[04] VILLAGER) (DAY 3 (Agent[10] DIVINED Agent[04] WEREWOLF))) (XOR (ESTIMATE Agent[10] WEREWOLF) (ESTIMATE Agent[10] POSSESSED))"
+    # test5 = "DAY 1 (Agent[11] DIVINED Agent[10] WEREWOLF)"
+    # parser = MessageParser()
+    # res = parser.process_sentence(test5, agent_index=2, day=3, talk_number=4)
+    # print(res)
+    talk_num = TalkNumber(1,  2, 41)
+    print(talk_num)

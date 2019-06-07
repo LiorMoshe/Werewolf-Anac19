@@ -22,7 +22,7 @@ class Bodyguard(Villager):
         self._strategy = TownsFolkStrategy([i for i in range(1, self._game_settings._player_num)
                             if i != self._base_info._agentIndex],
                             self._base_info._agentIndex,
-                            self._base_info._role_map, self._player_perspective)
+                            self._base_info._role_map)
 
     def getName(self):
         return "Bodyguard"

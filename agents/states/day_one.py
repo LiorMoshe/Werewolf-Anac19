@@ -11,7 +11,11 @@ class DayOne(AgentState):
         AgentState.__init__(self, my_agent, agent_indices)
 
     def talk(self):
-        return self.ask_random_question()
+        """
+        In the talk function in the first day we ask random questions.
+        :return:
+        """
+        return self.ask_unique_random_question()
 
 
 

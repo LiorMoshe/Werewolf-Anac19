@@ -184,6 +184,7 @@ class AgentPerspective(object):
         he is a liar.
         :return:
         """
+        Logger.instance.write("Detected lie for agent: " + str(self._index))
         self._liar_score += 1
 
     def log_perspective(self):

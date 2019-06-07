@@ -5,6 +5,7 @@ from agents.information_processing.graph_utils.group_finder import  GroupFinder
 from agents.information_processing.graph_utils.visualization import visualize
 from agents.information_processing.dissection.sentence_dissector import SentenceDissector
 from agents.states.day_one import DayOne
+from agents.information_processing.lie_detector import LieDetector
 import numpy as np
 
 # These sentences currently, don't help us much (maybe will be used in future dev).
@@ -40,7 +41,7 @@ class TownsFolkStrategy(object):
     inspects moves of werewolves teammates through the night and day.
     """
 
-    def __init__(self, agent_indices, my_index, role_map, player_perspective):
+    def __init__(self, agent_indices, my_index, role_map):
         self._perspectives = {}
         self._message_parser = MessageParser()
 
@@ -58,6 +59,8 @@ class TownsFolkStrategy(object):
         self._model = None
         self._agent_state = DayOne(my_index, agent_indices)
         self._group_finder = GroupFinder(agent_indices + [my_index])
+
+        self._lie_detector = LieDetector(my_index, agent_indices, role_map[str(my_index)])
 
     def update(self, diff_data):
         """
@@ -113,9 +116,11 @@ class TownsFolkStrategy(object):
         game_graph = self._group_finder.find_groups(self._perspectives, day)
         game_graph.log()
 
+        self.generate_tasks(day)
+
         # Note: In case you try running several games together you cant use the visualization.
         if message_type == MessageType.FINISH:
-            visualize(game_graph)
+            # visualize(game_graph)
             SentencesContainer.instance.clean()
 
     def talk(self):
@@ -123,12 +128,15 @@ class TownsFolkStrategy(object):
         Logger.instance.write("I Said: " + sentence)
         return sentence
 
+    def generate_tasks(self, day):
+        return self._lie_detector.find_matching_admitted_roles(self._perspectives, day)
+
 
 
 class SeerStrategy(TownsFolkStrategy):
 
     def __init__(self, agent_indices, my_index, role_map, statusMap, player_perspective):
-        super().__init__(agent_indices, my_index, role_map, player_perspective)
+        super().__init__(agent_indices, my_index, role_map)
 
         self.my_index = my_index
         self._divined_agents = {}

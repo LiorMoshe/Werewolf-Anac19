@@ -19,7 +19,7 @@ DISAGREE = "DISAGREE"
 
 
 def agent_str(idx):
-    return "Agent" + str(idx) if idx != ANY else ANY
+    return "Agent" + "[" + str(idx) + "]" if idx != ANY else ANY
 
 
 def who_voted_for(**kwargs):
@@ -31,7 +31,7 @@ def who_voted_for(**kwargs):
     subject = kwargs["subject"]
     target = kwargs["target"]
 
-    return " ".join([INQUIRE, agent_str(subject), OPENING_PARENTHESIS, VOTED, agent_str(target), CLOSING_PARENTHESIS])
+    return " ".join([INQUIRE, agent_str(subject), OPENING_PARENTHESIS + VOTED, agent_str(target) + CLOSING_PARENTHESIS])
 
 
 def who_will_vote_for(**kwargs):
@@ -43,7 +43,7 @@ def who_will_vote_for(**kwargs):
     subject = kwargs["subject"]
     target = kwargs["target"]
 
-    return " ".join([INQUIRE, agent_str(subject), OPENING_PARENTHESIS, VOTE, agent_str(target), CLOSING_PARENTHESIS])
+    return " ".join([INQUIRE, agent_str(subject), OPENING_PARENTHESIS + VOTE, agent_str(target) + CLOSING_PARENTHESIS])
 
 
 def do_you_estimate(**kwargs):
@@ -59,7 +59,7 @@ def do_you_estimate(**kwargs):
     role = kwargs["role"]
 
     return " ".join(
-        [INQUIRE, agent_str(subject), OPENING_PARENTHESIS, ESTIMATE, agent_str(target), str(role), CLOSING_PARENTHESIS])
+        [INQUIRE, agent_str(subject), OPENING_PARENTHESIS + ESTIMATE, agent_str(target), str(role) + CLOSING_PARENTHESIS])
 
 def do_you_comingout(**kwargs):
     """
@@ -74,19 +74,19 @@ def do_you_comingout(**kwargs):
     role = kwargs["role"]
 
     return " ".join(
-        [INQUIRE, agent_str(subject), OPENING_PARENTHESIS, COMINGOUT, agent_str(target), str(role), CLOSING_PARENTHESIS])
+        [INQUIRE, agent_str(subject), OPENING_PARENTHESIS + COMINGOUT, agent_str(target), str(role) + CLOSING_PARENTHESIS])
 
 
 def do_you_agree_with(**kwargs):
     subject = kwargs["subject"]
     talk_number = kwargs["talk_number"]
-    return " ".join([INQUIRE, agent_str(subject), OPENING_PARENTHESIS, AGREE, talk_number, CLOSING_PARENTHESIS])
+    return " ".join([INQUIRE, agent_str(subject), OPENING_PARENTHESIS + AGREE, talk_number + CLOSING_PARENTHESIS])
 
 def do_you_disagree_with(**kwargs):
     print(kwargs)
     subject = kwargs["subject"]
     talk_number = kwargs["talk_number"]
 
-    return " ".join([INQUIRE, agent_str(subject), OPENING_PARENTHESIS, DISAGREE, talk_number, CLOSING_PARENTHESIS])
+    return " ".join([INQUIRE, agent_str(subject), OPENING_PARENTHESIS + DISAGREE, talk_number + CLOSING_PARENTHESIS])
 
 
