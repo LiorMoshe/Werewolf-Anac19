@@ -37,7 +37,7 @@ class LieDetector(object):
         in the future.
         :param perspectives: All perspectives of agents that are still in the game.
         :param day Current day in the game.
-        :return:
+        :return: A list of created tasks
         """
 
         # Initialize admitted roles in the game with my role.
@@ -81,7 +81,6 @@ if __name__ == "__main__":
     # Create two perspectives and check if the matching works
     from agents.logger import Logger
     from agents.game_roles import GameRoles
-    from agents.information_processing.sentences_container import SentencesContainer
     from agents.information_processing.agent_perspective import AgentPerspective
     Logger("log.txt")
 

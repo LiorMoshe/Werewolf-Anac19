@@ -1,4 +1,5 @@
 from agents.states.agent_state import AgentState
+from agents.tasks.task_type import TaskType
 
 class DayOne(AgentState):
     """
@@ -10,7 +11,14 @@ class DayOne(AgentState):
     def __init__(self, my_agent, agent_indices):
         AgentState.__init__(self, my_agent, agent_indices)
 
-    def talk(self):
+    def get_task_mask(self):
+        """
+        In the first day we ignore tasks completely.
+        :return:
+        """
+        return {val: 0 for val in list(TaskType)}
+
+    def talk(self, task_manager):
         """
         In the talk function in the first day we ask random questions.
         :return:

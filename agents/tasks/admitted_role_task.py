@@ -1,6 +1,8 @@
 from agents.tasks.base_task import BaseTask
 from agents.sentence_generators.logic_generators import *
+from agents.tasks.task_type import TaskType
 
+DISCOUNT_FACTOR = 0.9
 
 class AdmittedRoleTask(BaseTask):
     """
@@ -22,7 +24,11 @@ class AdmittedRoleTask(BaseTask):
         self._admitted_role = admitted_role
         self._referenced_sentences = reference_sentences
 
+    def get_type(self):
+        return TaskType.SAME_ADMITTED_ROLE_WITH_ME if self.is_included() else TaskType.SAME_ADMITTED_ROLE
 
+    def update_importance_based_on_day(self, day):
+        self._importance *= DISCOUNT_FACTOR * (day - self._day)
 
     def handle_task(self, **kwargs):
         """

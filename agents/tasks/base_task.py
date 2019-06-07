@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+DUMB_HASH_VALUE = 0
+
 class BaseTask(ABC):
     """
     This represents a basic task that will be handles by our agent, each time we notice a major
@@ -23,12 +25,47 @@ class BaseTask(ABC):
         self.index = my_index
         self._relevant_agents = relevant_agents
 
+        # Global variable, my eyes, what a horror.
+        global DUMB_HASH_VALUE
+        DUMB_HASH_VALUE += 1
+        self._dumb_hash = DUMB_HASH_VALUE
+
     @abstractmethod
     def handle_task(self, **kwargs):
         """
         This method will return a sentence in which we resolve the task by letting the other agents
         know what we found and what do we think of it.
         :param kwargs:
+        :return:
+        """
+        pass
+
+    def get_importance(self):
+        return self._importance
+
+    def __lt__(self, other):
+        return self._importance < other.get_importance()
+
+    def __eq__(self, other):
+        return self._dumb_hash == other._dumb_hash and self._day == other._day and self.index == other.index \
+                and set(self._relevant_agents) == set(other._relevant_agents)
+
+    def __hash__(self):
+        """
+        We need this object to be a hashable type in order to be able to use it in our priority queue.
+        :return:
+        """
+        return self._dumb_hash
+
+    @abstractmethod
+    def get_type(self):
+        pass
+
+    @abstractmethod
+    def update_importance_based_on_day(self, day):
+        """
+        Update the importance of the task based on the current day.
+        :param day:
         :return:
         """
         pass

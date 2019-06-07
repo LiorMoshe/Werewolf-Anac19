@@ -40,8 +40,20 @@ class AgentState(ABC):
         self._day = 1
 
     @abstractmethod
-    def talk(self):
+    def talk(self, task_manager):
+        """
+        Given the task manager that holds all the tasks at hand choose what to say next.
+        :param task_manager:
+        :return:
+        """
         pass
+
+    @abstractmethod
+    def get_task_mask(self):
+        """
+        Get masking of tasks relevant to current state.
+        :return:
+        """
 
     def next_day(self):
         self._day += 1

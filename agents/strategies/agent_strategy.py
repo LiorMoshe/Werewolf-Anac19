@@ -6,6 +6,7 @@ from agents.information_processing.graph_utils.visualization import visualize
 from agents.information_processing.dissection.sentence_dissector import SentenceDissector
 from agents.states.day_one import DayOne
 from agents.information_processing.lie_detector import LieDetector
+from agents.tasks.task_manager import TaskManager
 import numpy as np
 
 # These sentences currently, don't help us much (maybe will be used in future dev).
@@ -55,12 +56,11 @@ class TownsFolkStrategy(object):
             self._perspectives[idx] = AgentPerspective(idx, my_index,
                                                        None if idx not in role_map.keys() else role_map[idx])
 
-        # TODO - This is the model that will be implemented.
-        self._model = None
         self._agent_state = DayOne(my_index, agent_indices)
         self._group_finder = GroupFinder(agent_indices + [my_index])
 
         self._lie_detector = LieDetector(my_index, agent_indices, role_map[str(my_index)])
+        self._task_manager = TaskManager()
 
     def update(self, diff_data):
         """
@@ -116,7 +116,12 @@ class TownsFolkStrategy(object):
         game_graph = self._group_finder.find_groups(self._perspectives, day)
         game_graph.log()
 
-        self.generate_tasks(day)
+
+        # If there is new data, check if new tasks can be created.
+        if len(diff_data.index) > 0:
+            tasks = self.generate_tasks(day)
+            self._task_manager.add_tasks(tasks)
+            self._task_manager.update_tasks_importance(day)
 
         # Note: In case you try running several games together you cant use the visualization.
         if message_type == MessageType.FINISH:
@@ -124,7 +129,11 @@ class TownsFolkStrategy(object):
             SentencesContainer.instance.clean()
 
     def talk(self):
-        sentence =  self._agent_state.talk()
+        """
+
+        :return:
+        """
+        sentence =  self._agent_state.talk(self._task_manager)
         Logger.instance.write("I Said: " + sentence)
         return sentence
 
