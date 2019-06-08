@@ -1,11 +1,16 @@
 from agents.logger import Logger
 from enum import Enum
+from agents.strategies.player_evaluation import PlayerEvaluation
 
 
 class EdgeType(Enum):
     LIKE = 1,
     HATE = 2
 
+
+LIKED_SCALE = -1
+
+HATE_SCALE = 0.5
 
 # noinspection PyAttributeOutsideInit
 class PlayerNode(object):
@@ -51,6 +56,52 @@ class PlayerNode(object):
         self.incoming_edges = {}
         self.undirected_edges = set()
         self.edges_references = {}
+
+    def get_incoming_edges(self):
+        return self._convert_to_edges(self.incoming_edges)
+
+
+    def _convert_to_edges(self, edge_list):
+        edges = []
+        for edge in edge_list:
+            edges.append(GameGraph.Edge(*edge))
+        return edges
+
+    def get_outgoing_edges(self):
+        return self._convert_to_edges(self.outgoing_edges)
+
+
+    def evaluate(self, ):
+        """
+        Perform an evaluation of this players state in the game based on the edges in the graph
+        We will give a low negative score for cooperation edges and
+        :return:
+        """
+
+        evaluation = 0.0
+
+        for edge in self.get_incoming_edges():
+            if edge.type == EdgeType.LIKE:
+                evaluation += LIKED_SCALE * edge.weight * PlayerEvaluation.instance.get_weight(edge.from_index)
+            else:
+                evaluation += HATE_SCALE * edge.weight * PlayerEvaluation.instance.get_weight(edge.from_index)
+
+        for edge in self.undirected_edges:
+            idx = edge.from_index if edge.from_index != self.index else edge.to_index
+            if edge.type == EdgeType.LIKE:
+                evaluation += LIKED_SCALE * edge.weight * PlayerEvaluation.instance.get_weight(idx)
+
+            else:
+                evaluation += HATE_SCALE * edge.weight * PlayerEvaluation.instance.get_weight(idx)
+
+        for edge in self.get_outgoing_edges():
+            if edge.type == EdgeType.LIKE:
+                evaluation += LIKED_SCALE * edge.weight * PlayerEvaluation.instance.get_weight(edge.to_index)
+            else:
+                evaluation += HATE_SCALE * edge.weight * PlayerEvaluation.instance.get_weight(edge.to_index)
+
+        return evaluation
+
 
 
 class GameGraph(object):
@@ -128,6 +179,21 @@ class GameGraph(object):
         """
         pass
 
+
+    def get_players_voting_scores(self):
+        """
+        This method will give a score to each player in the graph based on it's nodes, there is a high positive
+        score for HATE and edges and low negative score for LIKE edges.
+        :return:
+        """
+        evaluations = {}
+        relevant_players = PlayerEvaluation.instance.get_relevant_players()
+        for idx, node in self._nodes.items():
+            if idx in relevant_players:
+                evaluations[idx] = node.evaluate()
+        return evaluations
+
+
     def log(self):
         repr_str = "<<<<<< GameGraph Log >>>>>>>>>" + '\n' * 2
         for idx, node in self._nodes.items():
@@ -193,6 +259,14 @@ class GroupFinder(object):
         return self.build_graph()
 
     def update_edges(self, from_index, nodes, edge_type, get_weight_func):
+        """
+        Update the edges of the player nodes in the game graph based on the results in the players perspectives.
+        :param from_index:
+        :param nodes:
+        :param edge_type:
+        :param get_weight_func:
+        :return:
+        """
         for to_index, node in nodes.items():
             curr_edge = GameGraph.Edge(from_index, to_index, get_weight_func(node), edge_type)
             self._agents_nodes[to_index].incoming_edges[curr_edge.get_hashable_type()] = curr_edge.weight

@@ -3,10 +3,14 @@ from agents.information_processing.message_parsing import *
 from agents.information_processing.sentences_container import SentencesContainer
 from agents.information_processing.graph_utils.group_finder import  GroupFinder
 from agents.information_processing.graph_utils.visualization import visualize
+from agents.states.base_state import BaseState
 from agents.information_processing.dissection.sentence_dissector import SentenceDissector
 from agents.states.day_one import DayOne
 from agents.information_processing.lie_detector import LieDetector
 from agents.tasks.task_manager import TaskManager
+from agents.vote.townsfolk_vote_model import TownsfolkVoteModel
+from agents.states.state_type import StateType
+from agents.strategies.player_evaluation import PlayerEvaluation
 import numpy as np
 
 # These sentences currently, don't help us much (maybe will be used in future dev).
@@ -45,12 +49,17 @@ class TownsFolkStrategy(object):
     def __init__(self, agent_indices, my_index, role_map):
         self._perspectives = {}
         self._message_parser = MessageParser()
+        self._index = my_index
+        self._agent_indices = agent_indices
+        self._day = 1
 
         # Initialize the sentences container singleton
         SentencesContainer()
 
         # Initialize the singleton sentences dissector.
         SentenceDissector(my_index)
+
+        PlayerEvaluation(agent_indices, self._index)
 
         for idx in agent_indices:
             self._perspectives[idx] = AgentPerspective(idx, my_index,
@@ -61,6 +70,8 @@ class TownsFolkStrategy(object):
 
         self._lie_detector = LieDetector(my_index, agent_indices, role_map[str(my_index)])
         self._task_manager = TaskManager()
+
+        self._vote_model = TownsfolkVoteModel(agent_indices, my_index)
 
     def update(self, diff_data):
         """
@@ -101,8 +112,14 @@ class TownsFolkStrategy(object):
                     self._perspectives[curr_index].update_vote(parsed_sentence)
                 elif message_type == MessageType.EXECUTE:
                     self._perspectives[curr_index].update_status(AgentStatus.DEAD_TOWNSFOLK)
+                    self._vote_model.update_dead_agent(curr_index)
+                    print("AGENT" + str(self._index) + " Player " + str(curr_index) + " died by villagers")
+                    PlayerEvaluation.instance.player_died(curr_index)
                 elif message_type == MessageType.DEAD:
                     self._perspectives[curr_index].update_status(AgentStatus.DEAD_WEREWOLVES)
+                    self._vote_model.update_dead_agent(curr_index)
+                    self.update_votes_after_death(curr_index)
+
                 elif message_type == MessageType.ATTACK_VOTE:
                     print("Got attack vote when I am in townsfolk, BUG.")
                 elif message_type == MessageType.WHISPER:
@@ -113,8 +130,12 @@ class TownsFolkStrategy(object):
                 self._perspectives[curr_index].switch_sides(day)
                 self._perspectives[curr_index].log_perspective()
 
+            else:
+                # This is my index, save my own sentences if we need to reflect them in the future.
+                self._message_parser.add_my_sentence(self._index, agent_sentence, day, talk_number)
+
         game_graph = self._group_finder.find_groups(self._perspectives, day)
-        game_graph.log()
+        # game_graph.log()
 
 
         # If there is new data, check if new tasks can be created.
@@ -123,14 +144,34 @@ class TownsFolkStrategy(object):
             self._task_manager.add_tasks(tasks)
             self._task_manager.update_tasks_importance(day)
 
+            # Make sure we update the day of the game, used for discounting.
+            self._day = day
+
+
+        self.update_state()
+
         # Note: In case you try running several games together you cant use the visualization.
         if message_type == MessageType.FINISH:
-            # visualize(game_graph)
+            visualize(game_graph)
             SentencesContainer.instance.clean()
+
+    def update_votes_after_death(self, idx):
+        """
+        After the death of some agent we wish to update the scores in our voter model.
+        :param idx:
+        :return:
+        """
+        PlayerEvaluation.instance.player_died_werewolf(idx)
+        game_graph =  self._group_finder.find_groups(self._perspectives, self._day)
+        #updated_scores = analyze_death(idx, game_graph, self._vote_model.get_vottable_agents())
+
+
+        updated_scores = game_graph.get_players_voting_scores()
+        for agent_idx, score in updated_scores.items():
+            self._vote_model.update_vote(agent_idx, score, self._day)
 
     def talk(self):
         """
-
         :return:
         """
         sentence =  self._agent_state.talk(self._task_manager)
@@ -138,7 +179,30 @@ class TownsFolkStrategy(object):
         return sentence
 
     def generate_tasks(self, day):
+        """
+        This is the base method of generating tasks that will help us decide what to say in the next calls
+        to the talk function.
+        All players with special roles such as BodyGuard, Seer and Medium are expected to override this method
+        and extending it by adding specific tasks which are relevant to the added information they can gain
+        using their special abilities.
+        :param day:
+        :return:
+        """
         return self._lie_detector.find_matching_admitted_roles(self._perspectives, day)
+
+
+    def update_state(self):
+        """
+        Update the state of the agent throughout the game, this will help us choose which tasks to do
+        at given moments.
+        :return:
+        """
+        if self._day > 1 and self._agent_state.get_type() == StateType.DAY_ONE:
+            Logger.instance.write("Updated state to Base State from Day One State")
+            self._agent_state = BaseState(self._index, self._agent_indices)
+
+    def vote(self):
+        return self._vote_model.get_vote(self._day)
 
 
 

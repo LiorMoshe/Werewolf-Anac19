@@ -31,6 +31,9 @@ class TalkNumber(object):
         return "Day" + append_zero(self.day) + " " + append_zero(self.talk_turn) + "[" + \
                    str(append_zero(self.idx, required_digits=3)) + "]"
 
+    def get_next_talk_number(self):
+        return TalkNumber(self.day, self.talk_turn, self.idx + 1)
+
     @staticmethod
     def is_on_day(talk_number, day):
         """
@@ -43,6 +46,17 @@ class TalkNumber(object):
 
     def __eq__(self, other):
         return self.day == other.day and self.idx == other.idx and self.talk_turn == other.talk_turn
+
+    @staticmethod
+    def from_string(talk_num_str):
+        print(talk_num_str)
+        day, idx_and_turn = talk_num_str.split(' ')
+        day = int(day[DAY_STRING_LENGTH:])
+        turn, idx = idx_and_turn.split('[')
+        idx = idx.replace(']','')
+        turn = int(turn)
+        idx = int(idx)
+        return TalkNumber(day, turn, idx)
 
 class SentenceType(Enum):
     ESTIMATE = 1,
@@ -77,19 +91,19 @@ ACTION_RESULT = [SentenceType.ATTACKED, SentenceType.GUARDED, SentenceType.DIVIN
 # Reason = namedtuple('Reason', 'cause effect')
 
 # Represents a logic statement made by a subject regarding the given sentences.
-LogicStatement = namedtuple('LogicStatement', 'subject type sentences reason day described_day')
+LogicStatement = namedtuple('LogicStatement', 'subject type sentences reason day described_day original_message')
 
 # Shows vote of an agent against specific agent, can hold reason if there is any.
-Vote = namedtuple('Vote', 'subject target type reason day described_day')
+Vote = namedtuple('Vote', 'subject target type reason day described_day original_message')
 
 # An action done by the subject on the target.
-Action = namedtuple('Action', 'subject target type reason day described_day')
+Action = namedtuple('Action', 'subject target type reason day described_day original_message')
 
 # Result of an action of the subject on the target, if there is any new result it is held in species.
-ActionResult = namedtuple('ActionResult', 'subject target species type reason day described_day')
+ActionResult = namedtuple('ActionResult', 'subject target species type reason day described_day original_message')
 
 # Knowledge represents messages such as COMINGOUT, ESTIMATE where an agent thinks he knows something about other agents.
-Knowledge = namedtuple('Knowledge', 'subject target role type reason day described_day')
+Knowledge = namedtuple('Knowledge', 'subject target role type reason day described_day original_message')
 
 KNOWLEDGE_TYPES = ['ESTIMATE', 'COMINGOUT']
 
@@ -99,13 +113,13 @@ AVAILABLE_ACTION_RESULTS = ['DIVINED', 'IDENTIFIED', 'GUARDED', 'VOTED', 'ATTACK
 
 LOGIC_OPERATORS = ['AND', 'XOR', 'NOT', 'OR', 'BECAUSE']
 
-Request = namedtuple('Request', 'subject target content type reason day described_day')
+Request = namedtuple('Request', 'subject target content type reason day described_day original_message')
 
-Inquire = namedtuple('Inquire', 'subject target content type reason day described_day')
+Inquire = namedtuple('Inquire', 'subject target content type reason day described_day original_message')
 
 # An opinion is used when an agent says whether he agrees or disagrees with a given sentence
 # (represented as talk number).
-Opinion = namedtuple('Opinion', 'subject talk_number type referencedSentence day described_day')
+Opinion = namedtuple('Opinion', 'subject talk_number type referencedSentence day described_day original_message')
 
 
 def extract_agent_idx(message):
@@ -146,6 +160,9 @@ class MessageParser(object):
     def __init__(self):
         self._talk_number_to_message = {}
 
+    def add_my_sentence(self, my_index, sentence, day, talk_number):
+        self.process_sentence(sentence, my_index, day, talk_number)
+
     def parse_sentence_with_logic(self, sentence, agent_index, day, talk_number, described_day):
         """
         Parse a sentence that contains a logic operator, this is sometimes paired with a subject
@@ -181,7 +198,7 @@ class MessageParser(object):
                                                              agent_index, day, talk_number, described_day))
 
         return LogicStatement(subject=subject, type=operator_type, sentences=processed_sentences,
-                              reason=None, day=day, described_day=described_day)
+                              reason=None, day=day, described_day=described_day, original_message=sentence)
 
     def process_sentence(self, sentence, agent_index, day, talk_number, described_day=None):
         """
@@ -212,7 +229,8 @@ class MessageParser(object):
                                                                                           type=SentenceType.REQUEST,
                                                                                           reason=None,
                                                                                           day=day,
-                                                                                          described_day=described_day))
+                                                                                          described_day=described_day,
+                                                                                          original_message=sentence))
         elif "INQUIRE" in sentence:
             result = MessageParser.parse_request(sentence, agent_index,
                                                  lambda subject, target, content: Inquire(subject=subject,
@@ -225,7 +243,8 @@ class MessageParser(object):
                                                                                           type=SentenceType.INQUIRE,
                                                                                           reason=None,
                                                                                           day=day,
-                                                                                          described_day=described_day))
+                                                                                          described_day=described_day,
+                                                                                          original_message=sentence))
         elif "ESTIMATE" in sentence or "COMINGOUT" in sentence:
             result = MessageParser.parse_knowledge_sentence(sentence, agent_index, day, described_day)
         elif "AGREE" in sentence or "DISAGREE" in sentence:
@@ -249,19 +268,24 @@ class MessageParser(object):
         :param described_day:
         :return:
         """
-        splitted_sentence = sentence.split(' ')
+        # AGREE Day01 00[008]
+        print(sentence)
+        num_words = len(sentence.split(' '))
 
-        if len(splitted_sentence) == 2:
+        split_sentence = sentence.split(' ', num_words - 2)
+
+        if num_words == 3:
             subject = agent_idx
-            opinion_type = SentenceType[splitted_sentence[0]]
-            talk_number = int(splitted_sentence[1])
+            opinion_type = SentenceType[split_sentence[0]]
+            talk_number = TalkNumber.from_string(split_sentence[1])
         else:
-            subject = extract_agent_idx(splitted_sentence[0])
-            opinion_type = SentenceType[splitted_sentence[1]]
-            talk_number = int(splitted_sentence[2])
+            subject = extract_agent_idx(split_sentence[0])
+            opinion_type = SentenceType[split_sentence[1]]
+            talk_number = TalkNumber.from_string(split_sentence[2])
 
-        return Opinion(subject, talk_number, opinion_type, self._talk_number_to_message[talk_number], day,
-                       described_day)
+        # Todo-  Fix this bug that causes to insert None in referenced sentence.
+        return Opinion(subject, talk_number, opinion_type, self._talk_number_to_message[str(talk_number)], day,
+                       described_day, original_message=sentence)
 
     @staticmethod
     def parse_request(sentence, agent_idx, object_builder):
@@ -316,7 +340,7 @@ class MessageParser(object):
             role = parts_of_sentence[3]
 
         return Knowledge(subject=subject, target=target, role=role, type=knowledge_type,
-                         reason=None, day=day, described_day=described_day)
+                         reason=None, day=day, described_day=described_day, original_message=sentence)
 
     @staticmethod
     def parse_past_action_sentence(sentence, agent_index, day, described_day):
@@ -349,7 +373,7 @@ class MessageParser(object):
             target = extract_agent_idx(parts_of_sentence[2])
             species = parts_of_sentence[3]
         return ActionResult(subject=subject, target=target, species=species, type=action_type,
-                            reason=None, day=day, described_day=described_day)
+                            reason=None, day=day, described_day=described_day, original_message=sentence)
 
     def parse_with_time_info(self, sentence, agent_index, day, talk_number):
         """
@@ -388,7 +412,7 @@ class MessageParser(object):
             target = extract_agent_idx(parts_of_sentence[2])
 
         return Action(subject=subject,  target=target, type=action_result_type,
-                      reason=None, day=day, described_day=described_day)
+                      reason=None, day=day, described_day=described_day, original_message=sentence)
 
 
 if __name__ == "__main__":

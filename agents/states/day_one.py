@@ -1,5 +1,6 @@
 from agents.states.agent_state import AgentState
 from agents.tasks.task_type import TaskType
+from agents.states.state_type import StateType
 
 class DayOne(AgentState):
     """
@@ -7,6 +8,9 @@ class DayOne(AgentState):
     select agents randomly and asked them questions.
     Once he asked enough/ got no replies at all answer with "Over" or "Skip".
     """
+
+    def get_type(self):
+        return StateType.DAY_ONE
 
     def __init__(self, my_agent, agent_indices):
         AgentState.__init__(self, my_agent, agent_indices)

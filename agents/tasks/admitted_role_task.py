@@ -37,8 +37,8 @@ class AdmittedRoleTask(BaseTask):
         :param kwargs:
         :return:
         """
-
-        admitted_sentences = [wrap(sentence) for sentence in self._referenced_sentences]
+        print(self._referenced_sentences)
+        admitted_sentences = [wrap(sentence.original_message) for sentence in self._referenced_sentences]
         if self.is_included():
 
             admitted_sentences = [wrap(comingout(self.index, self._admitted_role))] + admitted_sentences
