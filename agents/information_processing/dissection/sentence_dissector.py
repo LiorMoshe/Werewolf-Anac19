@@ -27,6 +27,49 @@ class DissectedSentence(object):
     def is_hostile(self):
         return self.enemy is not None and self.cooperator is None
 
+    def get_enemies(self):
+        """
+        Go over all the dissected subsentences recursively and receive all enemies given in this sentence.
+        :return:
+        """
+        enemies = [self.enemy] if self.enemy is not None else []
+        if len(self.dissected_subsentences) == 0:
+            return enemies
+
+        for sentence in self.dissected_subsentences:
+            enemies += sentence.get_enemies()
+
+        idx_to_enemy = {}
+        for enemy in enemies:
+            if enemy.index not in idx_to_enemy:
+                idx_to_enemy[enemy.index] = [enemy]
+            else:
+                idx_to_enemy[enemy.index].append(enemy)
+
+        # Merge all the enemies.
+        final_enemies = []
+        for idx, curr_enemies in idx_to_enemy.items():
+            num_enemies = len(curr_enemies)
+            if num_enemies > 1:
+                first_enemy = curr_enemies[0]
+                for other_enemy_idx in range(1, num_enemies):
+                    first_enemy.scale(num_enemies).merge_enemies(curr_enemies[other_enemy_idx].scale(num_enemies))
+
+                final_enemies.append(first_enemy)
+            else:
+                final_enemies.append(curr_enemies[0])
+
+        return final_enemies
+
+
+    def get_cooperators(self):
+        """
+        Go over all dissected subsetences recusresively and receive all enemies.
+        :return:
+        """
+
+
+
     def has_subsentences(self):
         return len(self.dissected_subsentences) != 0
 
@@ -348,7 +391,9 @@ if __name__ == "__main__":
     Logger("log.txt")
     SentencesContainer()
     message_parser = MessageParser()
-    message = message_parser.process_sentence("COMINGOUT Agent[8] POSSESSED", 8, 1, TalkNumber(1, 10, 10))
+    message = message_parser.process_sentence("BECAUSE (AND (COMINGOUT Agent[01] SEER) (COMINGOUT Agent[03] SEER)) (OR (XOR (ESTIMATE Agent[01] WEREWOLF) (ESTIMATE Agent[01] POSSESSED)) (XOR (ESTIMATE Agent[03] WEREWOLF) (ESTIMATE Agent[03] POSSESSED)))", 8, 1, TalkNumber(1, 10, 10))
 
     res = SentenceDissector.instance.dissect_sentence(message, TalkNumber(1, 10, 10), 1)
-    print(res)
+    enemies = res.get_enemies()
+    print(enemies)
+

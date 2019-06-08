@@ -1,8 +1,11 @@
+from operator import itemgetter
+from agents.tasks.request_vote_task import RequestVoteTask
+
 
 EPSILON = 0.01
 
 
-LYING_FINE = 2
+LYING_FINE = 3
 
 class PlayerEvaluation(object):
     """
@@ -18,9 +21,9 @@ class PlayerEvaluation(object):
 
 
         def __init__(self, indices, my_idx):
-            print("INIT")
             self._weights = {idx: 1 for idx in indices}
             self._weights[my_idx] = EPSILON
+            self.index = my_idx
             self._relevant_players = [idx for idx in indices]
 
         def player_lied(self, idx, num_potential_liars):
@@ -39,6 +42,9 @@ class PlayerEvaluation(object):
         def get_relevant_players(self):
             return self._relevant_players
 
+        def get_dangerous_agent(self):
+            return max(self._weights.items(), key=itemgetter(1))[0]
+
         def player_died_werewolf(self, idx):
             """
             If a player died from wolves he is obviously a villager.
@@ -53,6 +59,47 @@ class PlayerEvaluation(object):
                 return self._weights[idx]
             except KeyError:
                 raise Exception("Tried getting weight of player " + str(idx) + " in PlayerEvaluation but he doesn't exist.")
+
+        def update_evaluation(self, game_graph, day):
+            """
+            Given our player's node in the game graph see which players like us and which are
+            dangerous to us so we have high incentive to vote for them in order to save ourselves.
+            This method can create tasks of traction with the goal of requesting agents to vote for somone.
+            :param game_graph: Graph of the game.
+            :param day
+            :return:
+            """
+            player_node = game_graph.get_node(self.index)
+            for edge in player_node.get_incoming_edges():
+                if edge.from_index in self._relevant_players:
+                    if edge.is_hostile():
+                        self._weights[edge.from_index] += edge.weight
+                    else:
+                        self._weights[edge.from_index] = max(EPSILON, self._weights[edge.from_index] - edge.weight)
+
+            for edge in player_node.undirected_edges:
+                idx = edge.from_index if edge.from_index != player_node.index else edge.to_index
+                if idx in self._relevant_players:
+                    if edge.is_hostile():
+                        self._weights[idx] += edge.weight
+                    else:
+                        self._weights[idx] = max(EPSILON, self._weights[idx] - edge.weight)
+
+
+            # Look at the most dangerous agent.
+            dangerous_idx = self.get_dangerous_agent()
+            dangerous_node = game_graph.get_node(dangerous_idx)
+
+            # If less than third of the players don't like him, gain traction by creating a task against him.
+            task = None
+            if dangerous_node.num_haters() < len(self._relevant_players) / 3:
+                task = RequestVoteTask(dangerous_idx, 1, day, [self.index, dangerous_idx], self.index)
+
+            return task
+
+        def day_passed(self):
+            for idx in self._weights:
+                self._weights[idx] /= 2
 
 
 

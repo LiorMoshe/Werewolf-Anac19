@@ -32,7 +32,7 @@ class TalkNumber(object):
                    str(append_zero(self.idx, required_digits=3)) + "]"
 
     def get_next_talk_number(self):
-        return TalkNumber(self.day, self.talk_turn, self.idx + 1)
+        return TalkNumber(self.day, self.talk_turn, self.idx)
 
     @staticmethod
     def is_on_day(talk_number, day):

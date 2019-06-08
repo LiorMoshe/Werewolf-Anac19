@@ -127,20 +127,18 @@ class TownsFolkStrategy(object):
                 elif message_type == MessageType.FINISH:
                     self._perspectives[curr_index].update_real_role(parsed_sentence.role)
                     self._group_finder.set_player_role(curr_index, parsed_sentence.role)
-                self._perspectives[curr_index].switch_sides(day)
-                self._perspectives[curr_index].log_perspective()
 
+                self._perspectives[curr_index].switch_sides(day)
             else:
                 # This is my index, save my own sentences if we need to reflect them in the future.
                 self._message_parser.add_my_sentence(self._index, agent_sentence, day, talk_number)
 
-        game_graph = self._group_finder.find_groups(self._perspectives, day)
-        # game_graph.log()
+        game_graph = self._group_finder.find_groups(self._perspectives, day)        # game_graph.log()
 
 
         # If there is new data, check if new tasks can be created.
         if len(diff_data.index) > 0:
-            tasks = self.generate_tasks(day)
+            tasks = self.generate_tasks(game_graph, day)
             self._task_manager.add_tasks(tasks)
             self._task_manager.update_tasks_importance(day)
 
@@ -163,8 +161,6 @@ class TownsFolkStrategy(object):
         """
         PlayerEvaluation.instance.player_died_werewolf(idx)
         game_graph =  self._group_finder.find_groups(self._perspectives, self._day)
-        #updated_scores = analyze_death(idx, game_graph, self._vote_model.get_vottable_agents())
-
 
         updated_scores = game_graph.get_players_voting_scores()
         for agent_idx, score in updated_scores.items():
@@ -178,17 +174,23 @@ class TownsFolkStrategy(object):
         Logger.instance.write("I Said: " + sentence)
         return sentence
 
-    def generate_tasks(self, day):
+    def generate_tasks(self, game_graph, day):
         """
         This is the base method of generating tasks that will help us decide what to say in the next calls
         to the talk function.
         All players with special roles such as BodyGuard, Seer and Medium are expected to override this method
         and extending it by adding specific tasks which are relevant to the added information they can gain
         using their special abilities.
+        :param game_graph
         :param day:
         :return:
         """
-        return self._lie_detector.find_matching_admitted_roles(self._perspectives, day)
+        tasks = self._lie_detector.find_matching_admitted_roles(self._perspectives, day)
+        request_vote_task = PlayerEvaluation.instance.update_evaluation(game_graph, day)
+
+        if request_vote_task is not None:
+            tasks.append(request_vote_task)
+        return tasks
 
 
     def update_state(self):

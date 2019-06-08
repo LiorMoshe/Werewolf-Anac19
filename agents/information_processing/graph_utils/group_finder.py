@@ -1,6 +1,8 @@
 from agents.logger import Logger
 from enum import Enum
 from agents.strategies.player_evaluation import PlayerEvaluation
+from agents.information_processing.dissection.player_representation import Cooperator
+
 
 
 class EdgeType(Enum):
@@ -48,6 +50,23 @@ class PlayerNode(object):
         for idx, node in player_nodes.items():
             self.edges_references[idx] = node
 
+    def _count_edges_of_type(self, edge_type):
+        cnt = 0
+        for edge in self.get_incoming_edges():
+            if edge.type == edge_type:
+                cnt += 1
+
+        for edge in self.undirected_edges:
+            if edge.type == edge_type:
+                cnt += 1
+        return cnt
+
+    def num_cooperators(self):
+        return self._count_edges_of_type(EdgeType.LIKE)
+
+    def num_haters(self):
+        return self._count_edges_of_type(EdgeType.HATE)
+
     def is_connected(self):
         return len(self.undirected_edges) != 0 or len(self.outgoing_edges) != 0 or len(self.incoming_edges) != 0
 
@@ -74,7 +93,9 @@ class PlayerNode(object):
     def evaluate(self, ):
         """
         Perform an evaluation of this players state in the game based on the edges in the graph
-        We will give a low negative score for cooperation edges and
+        We will give a low negative score for cooperation edges and high positive score for non cooperation edges.
+        This shows the state of each player in the game - how many players liked him and hate him
+        when the players are factored by how much do we think they are dangerous to us.
         :return:
         """
 
@@ -102,6 +123,25 @@ class PlayerNode(object):
 
         return evaluation
 
+    def get_haters(self):
+        """
+        Go over incoming and undirected hate edges and give cooperation scores for agents based on
+        the difference in the weights of the edges
+        :return:
+        """
+        # You know your agent is awesome when he has haters. Its a fact.
+        haters = {}
+
+        for edge in self.get_incoming_edges():
+            if edge.type == EdgeType.HATE:
+                haters[edge.from_index] = edge.weight
+
+        for edge in self.undirected_edges:
+            if edge.type == EdgeType.HATE:
+                idx = edge.from_index if edge.from_index != self.index else edge.to_index
+                haters[idx] = edge.weight
+
+        return haters
 
 
 class GameGraph(object):
@@ -136,6 +176,9 @@ class GameGraph(object):
             """
             return self.from_index, self.to_index, self.weight, self.type, self.multi_directional
 
+        def is_hostile(self):
+            return self.type == EdgeType.HATE
+
         @staticmethod
         def get_as_multi_directional(first_edge, second_edge):
             """
@@ -162,14 +205,16 @@ class GameGraph(object):
         except KeyError:
             return None
 
-    def finalize_graph(self):
+    def finalize_graph(self, perspectives):
         """
         Add references to neighbors in all the nodes in the graph.
+        :param perspectives
         :return:
         """
         for idx, node in self._nodes.items():
             if node.is_connected():
                 node.set_up_references(self._nodes)
+        self.find_likely_cooperators_in_graph(perspectives)
         return self
 
     def get_connected_components(self):
@@ -192,6 +237,33 @@ class GameGraph(object):
             if idx in relevant_players:
                 evaluations[idx] = node.evaluate()
         return evaluations
+
+    def find_likely_cooperators_in_graph(self, perspectives):
+        """
+        In the graph we hold information from all the perspectives of the players, this can
+        help us find some signs of cooperation that we can't notice in using only one of the
+        perspectives. As a heuristic each PlayerNode will go over it's incoming HATE edges
+        and give all pairs of players from this incoming edges a score of cooperation based
+        on the difference between the weight of the edges.
+        :param perspectives:
+        :return:
+        """
+        for idx, perspective in perspectives.items():
+
+            haters = self._nodes[idx].get_haters()
+            for curr_idx, weight in haters.items():
+                for cooperator_idx, other_weight in haters.items():
+                    if curr_idx != cooperator_idx:
+                        diff = weight - other_weight
+                        if diff == 0:
+                            cooperator_weight = 1
+                        else:
+                            cooperator_weight = abs(diff) if abs(diff) < 1 else 1/ abs(diff)
+
+                        cooperator = Cooperator(cooperator_idx, {}, cooperator_weight)
+                        perspectives[curr_idx].update_cooperator(cooperator)
+
+
 
 
     def log(self):
@@ -256,7 +328,7 @@ class GroupFinder(object):
                               lambda enemy: enemy.get_hostility(day))
 
         self.find_mutual_connections()
-        return self.build_graph()
+        return self.build_graph(perspectives)
 
     def update_edges(self, from_index, nodes, edge_type, get_weight_func):
         """
@@ -272,9 +344,10 @@ class GroupFinder(object):
             self._agents_nodes[to_index].incoming_edges[curr_edge.get_hashable_type()] = curr_edge.weight
             self._agents_nodes[from_index].outgoing_edges[curr_edge.get_hashable_type()] = curr_edge.weight
 
-    def build_graph(self):
+    def build_graph(self, perspectives):
         """
         Given the agent fames build the final game graph.
+        :param perspectives
         :return:
         """
         graph = GameGraph()
@@ -282,7 +355,7 @@ class GroupFinder(object):
             if index in self._player_roles.keys():
                 node.role = self._player_roles[index]
             graph.add_node(node)
-        return graph.finalize_graph()
+        return graph.finalize_graph(perspectives)
 
     def clean_groups(self):
         for node in self._agents_nodes.values():

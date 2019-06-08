@@ -77,19 +77,27 @@ class AgentPerspective(object):
         :param day
         :return:
         """
+        to_be_removed = []
         for index, cooperator in self._cooperators.items():
             total_fondness = self._cooperators[index].get_fondness(day)
             if total_fondness <= 0:
                 Logger.instance.write("Agent " + str(index) + " switch sides! Cooperator to enemy.")
                 self._noncooperators[index] = self._cooperators[index].convert_to_enemy()
-                self._cooperators.pop(index, None)
+                to_be_removed.append(index)
 
+        for idx in to_be_removed:
+            self._cooperators.pop(idx, None)
+
+        to_be_removed = []
         for index, enemy in self._noncooperators.items():
             total_hostility = self._noncooperators[index].get_hostility(day)
             if total_hostility <= 0:
                 Logger.instance.write("Agent " + str(index) + " switched sides! Enemy to cooperator.")
                 self._cooperators[index] = self._noncooperators[index].convert_to_cooperator()
-                self._noncooperators.pop(index, None)
+                to_be_removed.append(index)
+
+        for idx in to_be_removed:
+            self._noncooperators.pop(idx, None)
 
 
 
@@ -122,7 +130,8 @@ class AgentPerspective(object):
         result = SentenceDissector.instance.dissect_sentence(message, talk_number, day)
 
         if result.is_hostile():
-            self.update_enemy(result.enemy)
+            for enemy in result.get_enemies():
+                self.update_enemy(enemy)
         elif result.cooperator is not None:
             self.update_cooperator(result.cooperator)
         else:

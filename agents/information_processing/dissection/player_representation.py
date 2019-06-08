@@ -21,17 +21,25 @@ class Cooperator(object):
     show the same level of fondness as requesting everyone to agree with a given statement.
     """
 
-    def __init__(self, index, history):
+    def __init__(self, index, history, initial_fondness = 0.0):
         self.index = index
         self._fondness_history = history
         self._was_updated = False
-        self._total_fondness = 0.0
+        self._total_fondness = initial_fondness
+        self._initial_fondness = initial_fondness
 
     def update_fondness(self, fondness, message):
         message_fondness = MessageFondness(message, fondness)
         return self.update(message_fondness)
 
     def update(self, message_fondness):
+        """
+        We only apply discounting for messages coming from the players.
+        If we update ht
+        :param message_fondness:
+        :return:
+        """
+
         if message_fondness.message.day in self._fondness_history.keys():
             self._fondness_history[message_fondness.message.day].append(message_fondness)
         else:
@@ -68,7 +76,7 @@ class Cooperator(object):
 
         for messages in cooperator.get_history().values():
             for message_fondness in messages:
-                if not  self.has_message_fondness():
+                if not self.has_message_fondness(message_fondness):
                     self.update(message_fondness)
 
     def get_history(self):
@@ -78,7 +86,7 @@ class Cooperator(object):
         if not self._was_updated:
             return self._total_fondness
         else:
-            self._total_fondness = 0.0
+            self._total_fondness = self._initial_fondness
             for day, messages_fondness in self._fondness_history.items():
                 distance = current_day - day
                 for message_fondness in messages_fondness:
@@ -199,6 +207,19 @@ class Enemy(object):
             for message_hostility in self._hostility_history[day]:
                 fondness_history[day].append(MessageFondness(message_hostility.message, -message_hostility.hostility))
         return Cooperator(self.index, fondness_history)
+
+    def scale(self, factor):
+        """
+        Scale all value of hostility of the player by a given factor.
+        :param factor:
+        :return:
+        """
+        for day, message_hostilities in self._hostility_history.items():
+            for message_hostility in message_hostilities:
+                message_hostility._replace(hostility=message_hostility.hostility * factor)
+        self._was_updated = True
+        return self
+
 
     def __eq__(self, other):
         return self.index == other.index
