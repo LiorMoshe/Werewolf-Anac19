@@ -128,8 +128,8 @@ class TownsFolkStrategy(object):
             talk_number = TalkNumber(day, turn, idx)
             Logger.instance.write("Got sentence: " + str(agent_sentence) + " from agent " + str(curr_index)  + '\n')
 
-             only seer and medium players will see
-             if message_type == MessageType.DIVINE:
+            #only seer and medium players will see
+            if message_type == MessageType.DIVINE:
                 print("DIVINE MESSAGE RECEIVED")
                 parsed_sentence = self._message_parser.process_sentence(agent_sentence, curr_index, day,
                                                                         talk_number)
