@@ -268,8 +268,6 @@ class MessageParser(object):
         :param described_day:
         :return:
         """
-        # AGREE Day01 00[008]
-        print(sentence)
         num_words = len(sentence.split(' '))
 
         split_sentence = sentence.split(' ', num_words - 2)
@@ -283,7 +281,6 @@ class MessageParser(object):
             opinion_type = SentenceType[split_sentence[1]]
             talk_number = TalkNumber.from_string(split_sentence[2])
 
-        # Todo-  Fix this bug that causes to insert None in referenced sentence.
         return Opinion(subject, talk_number, opinion_type, self._talk_number_to_message[str(talk_number)], day,
                        described_day, original_message=sentence)
 

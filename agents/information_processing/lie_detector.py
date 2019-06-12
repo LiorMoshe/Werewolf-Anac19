@@ -65,7 +65,7 @@ class LieDetector(object):
                 for idx in agent_indices:
                     if idx != self.index:
                         perspectives[idx].lie_detected()
-                        PlayerEvaluation.instance.player_lied(idx, len(agent_indices))
+                        PlayerEvaluation.instance.player_lied(idx, agent_indices)
 
         return tasks
 

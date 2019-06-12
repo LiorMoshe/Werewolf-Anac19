@@ -1,6 +1,7 @@
 from agents.tasks.base_task import BaseTask
 from agents.sentence_generators.logic_generators import *
 from agents.tasks.task_type import TaskType
+from agents.strategies.role_estimations import RoleEstimations
 
 DISCOUNT_FACTOR = 0.9
 
@@ -37,11 +38,16 @@ class AdmittedRoleTask(BaseTask):
         :param kwargs:
         :return:
         """
-        print(self._referenced_sentences)
         admitted_sentences = [wrap(sentence.original_message) for sentence in self._referenced_sentences]
         if self.is_included():
 
             admitted_sentences = [wrap(comingout(self.index, self._admitted_role))] + admitted_sentences
+
+        for sentence in self._referenced_sentences:
+            if sentence.subject != self.index:
+                RoleEstimations.instance.add_estimations(sentence.subject, [GameRoles.POSSESSED, GameRoles.WEREWOLF])
+
+
 
         # Show all coming out sentences and accuse everyone beside me to be either werewolf or possessed.
         return because_sentence(

@@ -124,11 +124,11 @@ class Enemy(object):
     The hostility level will be discounted based on the number of days that have passed since it was last seen.
     """
 
-    def __init__(self, index, history):
+    def __init__(self, index, history, initial_hostility = 0.0):
         self.index = index
         self._hostility_history = history
-        Logger.instance.write("Created new Enemy " + str(self.index) + "  initial history: " + str(self._hostility_history))
-        self._total_hostility = 0.0
+        self._initial_hostility = initial_hostility
+        self._total_hostility = initial_hostility
         self._was_updated = False
 
     def update_hostility(self, hostility, message):
@@ -152,7 +152,7 @@ class Enemy(object):
         if not self._was_updated:
             return self._total_hostility
         else:
-            self._total_hostility = 0.0
+            self._total_hostility = self._initial_hostility
             for day, message_hostilities in self._hostility_history.items():
                 distance = current_day - day
                 for message_hostility in message_hostilities:

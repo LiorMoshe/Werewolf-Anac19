@@ -27,6 +27,51 @@ class DissectedSentence(object):
     def is_hostile(self):
         return self.enemy is not None and self.cooperator is None
 
+    def get_messages_to_me(self):
+        """
+        Collect from all the dissected sub sentences the messages directed to me.
+        :return:
+        """
+        messages_to_me = []
+        if self.directed_to_me:
+            messages_to_me.append(self.message)
+
+        for sentence in self.dissected_subsentences:
+            messages_to_me += sentence.get_messages_to_me()
+
+        return messages_to_me
+
+    def get_estimations(self, depth=0):
+        """
+        Go recursively over the sentences and check if there is a comingout or estimate sentences in it.
+        :return:
+        """
+        estimations = {}
+        if hasattr(self.message, 'role'):
+            if not (depth == 0 and self.admitted_role is not None):
+                estimations[self.message.target] = {self.message.role}
+
+
+        if hasattr(self.message, 'species'):
+                estimations[self.message.target] = {self.message.species}
+
+
+        if len(self.dissected_subsentences) != 0:
+            relevant_subsentences = self.dissected_subsentences
+            if self.message.type == SentenceType.BECAUSE:
+                relevant_subsentences = [self.dissected_subsentences[1]]
+
+            for sentence in relevant_subsentences:
+                sentence_estimations = sentence.get_estimations(depth + 1)
+
+                for idx, idx_estimations in sentence_estimations.items():
+                    if idx in estimations:
+                        estimations[idx] = estimations[idx].union(idx_estimations)
+                    else:
+                        estimations[idx] = idx_estimations
+        return estimations
+
+
     def get_enemies(self):
         """
         Go over all the dissected subsentences recursively and receive all enemies given in this sentence.
@@ -134,6 +179,13 @@ class SentenceDissector(object):
                 self.update_based_on_or(message, talk_number, result)
             elif message.type == SentenceType.NOT:
                 self.update_based_on_not(message, talk_number, result)
+            elif message.type == SentenceType.AND:
+                self.update_based_on_and(message, talk_number, result)
+            # elif message.type == SentenceType.IDENTIFIED:
+            #     result.estimations[message.target] = message.role
+            # elif message.type == SentenceType.DIVINED:
+            #     result.estimations[message.target] = message.role
+            #
 
             if save_dissection:
                 SentencesContainer.instance.add_sentence(result)
@@ -161,7 +213,7 @@ class SentenceDissector(object):
                 # If there is a request towards someone we will see it as a sign of cooperation.
                 dissected_sentence.update_cooperator(self.create_cooperator(message, fondness=2))
 
-            if message.target == self.my_agent:
+            if message.target == self.my_agent or message.target == "ANY":
                 dissected_sentence.directed_to_me = True
 
             if content.type == SentenceType.ESTIMATE or content.type == SentenceType.COMINGOUT:
@@ -340,7 +392,7 @@ class SentenceDissector(object):
             :return:
             """
             # Save inquires that are directed to our agent. Maybe we will answer.
-            if message.target == self.my_agent:
+            if message.target == self.my_agent or message.target == "ANY":
                 dissected_sentence.directed_to_me = True
 
         def update_based_on_not(self, message, talk_number, dissected_sentence):
@@ -391,9 +443,11 @@ if __name__ == "__main__":
     Logger("log.txt")
     SentencesContainer()
     message_parser = MessageParser()
-    message = message_parser.process_sentence("BECAUSE (AND (COMINGOUT Agent[01] SEER) (COMINGOUT Agent[03] SEER)) (OR (XOR (ESTIMATE Agent[01] WEREWOLF) (ESTIMATE Agent[01] POSSESSED)) (XOR (ESTIMATE Agent[03] WEREWOLF) (ESTIMATE Agent[03] POSSESSED)))", 8, 1, TalkNumber(1, 10, 10))
+    message = message_parser.process_sentence("DAY 2 (IDENTIFIED Agent[01] WEREWOLF)", 8, 1, TalkNumber(1, 10, 10))
 
     res = SentenceDissector.instance.dissect_sentence(message, TalkNumber(1, 10, 10), 1)
+    to_me = res.get_messages_to_me()
+    estimations = res.get_estimations()
     enemies = res.get_enemies()
     print(enemies)
 

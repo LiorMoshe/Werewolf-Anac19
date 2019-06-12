@@ -1,11 +1,15 @@
 from operator import itemgetter
 from agents.tasks.request_vote_task import RequestVoteTask
-
+from agents.logger import Logger
+from itertools import combinations
 
 EPSILON = 0.01
 
 
-LYING_FINE = 3
+LYING_FINE = 100
+
+WEREWOLF_FINE = 1000.
+
 
 class PlayerEvaluation(object):
     """
@@ -26,8 +30,23 @@ class PlayerEvaluation(object):
             self.index = my_idx
             self._relevant_players = [idx for idx in indices]
 
-        def player_lied(self, idx, num_potential_liars):
-            self._weights[idx] += float(LYING_FINE / num_potential_liars)
+            self._liars = {}
+
+        def player_lied(self, idx, potential_liars):
+            for i in range(len(potential_liars)):
+                self._liars[potential_liars[i]] = [liar for liar in potential_liars if liar != potential_liars[i]]
+
+            self._weights[idx] += float(LYING_FINE / len(potential_liars))
+
+
+        def player_is_werewolf(self, idx):
+            if idx not in self._relevant_players:
+                # Player died, check if he has a lying partner that needs to be redeemed.
+                if idx in self._liars:
+                    for potential_liar in self._liars[idx]:
+                        self._weights[potential_liar] = 1
+
+                self._weights[idx] = WEREWOLF_FINE
 
         def player_died(self, idx):
             """
@@ -52,7 +71,22 @@ class PlayerEvaluation(object):
             :return:
             """
             self.player_died(idx)
+            self.player_in_townsfolk(idx)
+
+        def player_in_townsfolk(self, idx):
             self._weights[idx] = EPSILON
+
+        def thinks_im_human(self, idx):
+            self._weights[idx] = min(self._weights[idx], 1 - EPSILON)
+
+        def thinks_im_werewolf(self, idx):
+            self._weights[idx] = WEREWOLF_FINE / 2
+
+
+
+
+        def log(self):
+            Logger.instance.write("PlayerEvaluation: " + str(self._weights))
 
         def get_weight(self, idx):
             try:
@@ -89,7 +123,7 @@ class PlayerEvaluation(object):
             # Look at the most dangerous agent.
             dangerous_idx = self.get_dangerous_agent()
             dangerous_node = game_graph.get_node(dangerous_idx)
-
+            Logger.instance.write("Dangerous: " + str(dangerous_idx) + " num haters: " + str(dangerous_node.num_haters()))
             # If less than third of the players don't like him, gain traction by creating a task against him.
             task = None
             if dangerous_node.num_haters() < len(self._relevant_players) / 3:

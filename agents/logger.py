@@ -4,12 +4,16 @@ class Logger(object):
     class __Logger:
         def __init__(self, file_name):
             self._file = open(file_name, 'w')
+            self._index = None
 
         def write(self, message):
-            self._file.write(message + '\n')
+            self._file.write("Agent[" + str(self._index) + "]: " + message + '\n')
 
         def close(self):
             self._file.close()
+
+        def set_agent_index(self, index):
+            self._index = index
 
     instance = None
 

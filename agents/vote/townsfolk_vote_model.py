@@ -1,33 +1,6 @@
-from collections import namedtuple
 import random
-
-VoteUpdate = namedtuple('VoteUpdate', 'score day')
-
-VOTE_DISCOUNT = 0.8
-
-class VoteScore(object):
-
-    def __init__(self):
-        self._updates = []
-        self._score = 0.0
-        self._updated = False
-
-    def add_update(self, vote_update):
-        self._updates.append(vote_update)
-        self._updated = True
-
-    def get_score(self, day):
-        if not self._updated:
-            return self._score
-
-        total = 0.0
-        for update in self._updates:
-            total += VOTE_DISCOUNT ** (day - update.day) * update.score
-
-        self._score = total
-        self._updated = False
-
-        return self._score
+from agents.logger import Logger
+from operator import itemgetter
 
 class TownsfolkVoteModel(object):
     """
@@ -44,32 +17,54 @@ class TownsfolkVoteModel(object):
 
     def __init__(self, agent_indices, my_idx):
         self.index = my_idx
+        self._vote_scores = {idx:0 for idx in agent_indices}
 
-        print("AGENT INDICES IN VOTERMODEL" + str(agent_indices))
-        self._vote_scores = {idx: VoteScore() for idx in agent_indices}
-
-    def update_vote(self, agent_idx, score, day):
+    def update_vote(self, agent_idx, score):
         if agent_idx != self.index:
-            self._vote_scores[agent_idx].add_update(VoteUpdate(score, day))
+            self._vote_scores[agent_idx] += score
+
+    def clear_scores(self):
+        for idx in self._vote_scores.keys():
+            self._vote_scores[idx] = 0.0
+
+    def set_to_max_score(self, agent_idx):
+        max_score = max(self._vote_scores.items(), key=itemgetter(1))[1]
+        self._vote_scores[agent_idx] = abs(max_score) * 2
 
     def update_dead_agent(self, idx):
+        """
+        When an agent dies we don't want to consider him in the voting system anymore.
+        :param idx:
+        :return:
+        """
         del self._vote_scores[idx]
 
     def get_vottable_agents(self):
         return list(self._vote_scores.keys())
 
-    def get_vote(self, day):
-        max_idx = None
-        max_vote_score = float('-inf')
+    def get_vote(self):
+        Logger.instance.write("Current voting scores: " + str(self._vote_scores))
+        max_idx, max_vote_score = max(self._vote_scores.items(), key=itemgetter(1))
 
-        for idx, vote_score in self._vote_scores.items():
-            curr_score = vote_score.get_score(day)
-            if curr_score > max_vote_score:
-                max_vote_score = curr_score
-                max_idx = idx
-
-        print("Max vote score" + str(max_vote_score))
+        Logger.instance.write("Max vote score " + str(max_vote_score) + " for index: " + str(max_idx))
         if max_vote_score == 0:
             return random.choice(self.get_vottable_agents())
         return max_idx
+
+    def handle_vote_request(self, game_graph, requested_from, target):
+        """
+        Handle a request from some agent to vote to a given agent.
+        We will listen to this agent only if he is a really good cooperator of ours.
+        :param game_graph:
+        :param requested_from:
+        :param target
+        :return:
+        """
+        Logger.instance.write("Agent" + str(requested_from) + " requested from us to vote for Agent" + str(target))
+
+        top_cooperators = game_graph.get_node(self.index).get_top_k_cooperators(k=3)
+        if requested_from in top_cooperators:
+            Logger.instance.write("Requesting agent is a cooperator, maxing out his vote request")
+            self.set_to_max_score(target)
+
 
