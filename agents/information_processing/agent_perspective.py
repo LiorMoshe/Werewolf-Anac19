@@ -166,12 +166,25 @@ class AgentPerspective(object):
         enemy = Enemy(vote.target, history={}).update_hostility(hostility=4, message=vote)
         self.update_enemy(enemy)
 
+    def get_cooperators_indices(self):
+        return list(self._cooperators.keys())
+
+    def get_enemies_indices(self):
+        return list(self._noncooperators.keys())
+
+    def get_cooperators(self):
+        return self._cooperators
+
+    def get_enemies(self):
+        return self._noncooperators
+
     def lie_detected(self):
         """
         In case a lie was detected we will increment the liar score of this agent, it is more likely that
         he is a liar.
         :return:
         """
+        Logger.instance.write("Detected lie for agent: " + str(self._index))
         self._liar_score += 1
 
     def log_perspective(self):

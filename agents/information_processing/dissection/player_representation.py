@@ -39,6 +39,23 @@ class Cooperator(object):
         self._was_updated = True
         return self
 
+    def has_message_fondness(self, message_fondness):
+        """
+        Given a message fondness check if we have it in our history.
+        :param message_fondness:
+        :return:
+        """
+        message = message_fondness.message
+        if message.day in self._fondness_history.keys():
+            for curr_fondness in self._fondness_history[message_fondness.message.day]:
+                curr_message = curr_fondness.message
+
+                if message.type == curr_message.type and message.subject == curr_message.subject \
+                        and message.target == curr_message.target:
+                    return True
+
+        return False
+
 
     def merge_cooperators(self, cooperator):
         """
@@ -51,7 +68,8 @@ class Cooperator(object):
 
         for messages in cooperator.get_history().values():
             for message_fondness in messages:
-                self.update(message_fondness)
+                if not  self.has_message_fondness():
+                    self.update(message_fondness)
 
     def get_history(self):
         return self._fondness_history
@@ -134,6 +152,23 @@ class Enemy(object):
             self._was_updated = False
             return self._total_hostility
 
+    def has_message_hostility(self, message_hostility):
+        """
+        Given a message hostility check if we have it in our history.
+        :param message_hostility:
+        :return:
+        """
+        message = message_hostility.message
+        if message.day in self._hostility_history.keys():
+            for curr_hostility in self._hostility_history[message_hostility.message.day]:
+                curr_message = curr_hostility.message
+
+                if message.type == curr_message.type and message.subject == curr_message.subject \
+                    and message.target == curr_message.target:
+                    return True
+
+        return False
+
     def get_history(self):
         return self._hostility_history
 
@@ -146,12 +181,11 @@ class Enemy(object):
         if self.index != enemy.index:
             raise Exception("Can't merge enemies with different indices: " + str(self.index) + " and " + str(enemy.index))
 
-        print("Merging enemy index: " + str(enemy.index))
 
         for message_hostilities in enemy.get_history().values():
-            print(message_hostilities)
             for message_hostility in message_hostilities:
-                self.update(message_hostility)
+                if not self.has_message_hostility(message_hostility):
+                    self.update(message_hostility)
 
     def convert_to_cooperator(self):
         """

@@ -1,5 +1,5 @@
 from agents.uninformed.villager import Villager
-from agents.information_processing.strategies.SeerStrategy import SeerStrategy
+from agents.strategies.seer_strategy import SeerStrategy
 
 class Seer(Villager):
 

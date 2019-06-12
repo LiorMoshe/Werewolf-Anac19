@@ -1,7 +1,6 @@
 from abc import *
 from enum import Enum
 from agents.player_perspective import PlayerPerspective
-from agents.information_processing.agent_strategy import TownsFolkStrategy
 import numpy as np
 from enum import Enum
 
