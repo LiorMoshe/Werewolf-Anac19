@@ -27,7 +27,7 @@ def visualize(game_graph):
 
     covered = []
     edge_labels = {}
-    for i in range(1, 15):
+    for i in range(1, game_graph.num_nodes()):
         node = game_graph.get_node(i)
 
         for edge in node.outgoing_edges:

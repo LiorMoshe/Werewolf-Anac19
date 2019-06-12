@@ -1,21 +1,12 @@
 from agents.game_roles import *
 from agents.tasks.admitted_role_task import AdmittedRoleTask
+from agents.strategies.player_evaluation import PlayerEvaluation
 
 # Importance of the task of two lying agents detected.
 ADMITTED_ROLE_IMPORTANCE = 1.0
 
 # Importance of the task when one or more agents admitted to have my role.
 MY_ADMITTED_ROLE_IMPORTANCE = 2.0
-
-
-# class Lie(object):
-#
-#     def __init__(self, potential_liars, reasons):
-#         self._potential_liars = potential_liars
-#
-#     def get_lying_score(self):
-#         return 1 / len(self._potential_liars)
-
 
 class LieDetector(object):
     """
@@ -74,6 +65,7 @@ class LieDetector(object):
                 for idx in agent_indices:
                     if idx != self.index:
                         perspectives[idx].lie_detected()
+                        PlayerEvaluation.instance.player_lied(idx, agent_indices)
 
         return tasks
 

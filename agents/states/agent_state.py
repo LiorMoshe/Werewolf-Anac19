@@ -49,6 +49,10 @@ class AgentState(ABC):
         pass
 
     @abstractmethod
+    def get_type(self):
+        pass
+
+    @abstractmethod
     def get_task_mask(self):
         """
         Get masking of tasks relevant to current state.
@@ -81,7 +85,7 @@ class AgentState(ABC):
         params = {}
 
         # If there is any useful sentence we can ask whether the agents agrees or disagrees.
-        useful_sentences = SentencesContainer.instance.has_useful_sentence_on_day(self._day)
+        useful_sentences = SentencesContainer.instance.has_useful_sentence_on_day(self._day, random_subject)
         if len(useful_sentences) != 0:
             question_pool += [do_you_agree_with, do_you_disagree_with]
             params["talk_number"] = random.choice(useful_sentences)

@@ -3,9 +3,9 @@ from agents.logger import Logger
 from agents.information_processing.dissection.sentence_dissector import SentenceDissector
 from agents.information_processing.dissection.player_representation import Cooperator, Enemy
 
-
 MIN_SEVERITY_VAL = 1
 MAX_SEVERITY_VAL = 3
+
 
 class AgentStatus(Enum):
     ALIVE = 1
@@ -26,10 +26,9 @@ class AgentPerspective(object):
     Likely Role: The role I think that player has based on what happened thus far.
     Status: Status of the agent, is he alive or dead, if he is dead, who killed him? The townsfolk or the
     werewolves.
-    TODO- If it's easier to be hostile, should everyone start as cooperator.
     """
 
-    def __init__(self, agent_idx, my_idx, role=None):
+    def __init__(self, agent_idx, my_idx, num_agents, role=None):
         """
         :param agent_idx: Index of this agent.
         :param my_idx: Index of our agent.
@@ -41,7 +40,8 @@ class AgentPerspective(object):
         self.my_agent = my_idx
         self._liar_score = 0.0
         self._cooperators = {}
-        self._noncooperators = {}
+        self._noncooperators = {idx: Enemy(idx, {}, initial_hostility=0.1) for idx in range(1, num_agents + 1) if
+                                idx != agent_idx}
         self._admitted_role = None
         self._likely_role = None
         self._status = AgentStatus.ALIVE
@@ -49,6 +49,12 @@ class AgentPerspective(object):
         self._vote_score = 0
         # Messages ordered by day that are directed to me (think these are only inquire and request messages).
         self.messages_to_me = {}
+
+        # Map each agent index to a role or list of roles we estimate them to be in.
+        self._estimations = {idx: set() for idx in range(1, num_agents + 1) if idx != agent_idx}
+
+    def get_status(self):
+        return self._status
 
     def get_index(self):
         return self._index
@@ -68,7 +74,20 @@ class AgentPerspective(object):
         :param day:
         :return:
         """
-        return self.messages_to_me[day]
+        try:
+            return self.messages_to_me[day]
+        except KeyError:
+            return []
+
+    def clean_messages_to_me(self, day):
+        del self.messages_to_me[day]
+
+    def get_and_clean_messages_to_me(self, day):
+        res = self.get_messages_to_me(day)
+
+        if len(res) != 0:
+            self.clean_messages_to_me(day)
+        return res
 
     def switch_sides(self, day):
         """
@@ -77,21 +96,30 @@ class AgentPerspective(object):
         :param day
         :return:
         """
+        to_be_removed = []
         for index, cooperator in self._cooperators.items():
             total_fondness = self._cooperators[index].get_fondness(day)
             if total_fondness <= 0:
                 Logger.instance.write("Agent " + str(index) + " switch sides! Cooperator to enemy.")
                 self._noncooperators[index] = self._cooperators[index].convert_to_enemy()
-                self._cooperators.pop(index, None)
+                to_be_removed.append(index)
 
+        for idx in to_be_removed:
+            self._cooperators.pop(idx, None)
+
+        to_be_removed = []
         for index, enemy in self._noncooperators.items():
             total_hostility = self._noncooperators[index].get_hostility(day)
             if total_hostility <= 0:
                 Logger.instance.write("Agent " + str(index) + " switched sides! Enemy to cooperator.")
                 self._cooperators[index] = self._noncooperators[index].convert_to_cooperator()
-                self._noncooperators.pop(index, None)
+                to_be_removed.append(index)
 
+        for idx in to_be_removed:
+            self._noncooperators.pop(idx, None)
 
+    def has_cooperator(self, idx):
+        return idx in self._cooperators
 
     def add_message_directed_to_me(self, dissected_sentence):
         """
@@ -107,6 +135,8 @@ class AgentPerspective(object):
         else:
             self.messages_to_me[dissected_sentence.day] = [dissected_sentence]
 
+    def has_estimations(self):
+        return len(self._estimations) > 0 and self._admitted_role is not None
 
     def update_perspective(self, message, talk_number, day):
         """
@@ -117,27 +147,43 @@ class AgentPerspective(object):
         :return:
         """
 
-        Logger.instance.write("Dissecting Message: " + str(message))
+        Logger.instance.write("Dissecting Message: " + str(message.original_message))
 
         result = SentenceDissector.instance.dissect_sentence(message, talk_number, day)
 
         if result.is_hostile():
-            self.update_enemy(result.enemy)
+            for enemy in result.get_enemies():
+                self.update_enemy(enemy)
         elif result.cooperator is not None:
             self.update_cooperator(result.cooperator)
         else:
             Logger.instance.write("[AGENT " + str(self._index) + "]: Got sentence " + str(message) + " but found" +
                                   " nothing major while trying to dissect it.")
 
-        if result.directed_to_me:
-            self.add_message_directed_to_me(result)
+        message_to_me = result.get_messages_to_me()
+        for message in message_to_me:
+            self.add_message_directed_to_me(message)
 
         if result.admitted_role is not None:
             self._admitted_role = result.admitted_role
 
+        idx_to_estimations = result.get_estimations()
+        if len(idx_to_estimations) != 0:
+            for idx, estimation in idx_to_estimations.items():
+                self._estimations[idx] = self._estimations[idx].union(estimation)
+
+                if "WEREWOLF" in estimation:
+                    self.update_enemy(Enemy(idx, {}, initial_hostility=2))
+                elif "HUMAN" in estimation:
+                    self.update_cooperator(Cooperator(idx, {}, initial_fondness=2))
+
+
+    def get_estimations(self):
+        return self._estimations
+
     def update_cooperator(self, cooperator):
         if cooperator.index in self._cooperators.keys():
-            Logger.instance.write("[AGENT " + str(self._index) + "]: Updating cooperator: " + str(cooperator.index))
+            # Logger.instance.write("[AGENT " + str(self._index) + "]: Updating cooperator: " + str(cooperator.index))
             self._cooperators[cooperator.index].merge_cooperators(cooperator)
         elif cooperator.index in self._noncooperators.keys():
             self.update_enemy(cooperator.convert_to_enemy())
@@ -147,14 +193,13 @@ class AgentPerspective(object):
 
     def update_enemy(self, enemy):
         if enemy.index in self._noncooperators.keys():
-            Logger.instance.write("[AGENT " + str(self._index) + "]: Updating enemy: " + str(enemy.index))
+            # Logger.instance.write("[AGENT " + str(self._index) + "]: Updating enemy: " + str(enemy.index))
             self._noncooperators[enemy.index].merge_enemies(enemy)
         elif enemy.index in self._cooperators.keys():
             self.update_cooperator(enemy.convert_to_cooperator())
         else:
             Logger.instance.write("[AGENT " + str(self._index) + "]: Adding a new enemy: " + str(enemy.index))
             self._noncooperators[enemy.index] = enemy
-
 
     def update_vote(self, vote):
         """
@@ -199,3 +244,5 @@ class AgentPerspective(object):
         if abs(value) < MIN_SEVERITY_VAL or abs(value) > MAX_SEVERITY_VAL:
             assert "Vote score value is out of bound"
         self._vote_score += value
+
+

@@ -32,17 +32,18 @@ class SentencesContainer(object):
         def get_sentence(self, talk_number):
             return self.talk_number_to_sentences[str(talk_number)]
 
-        def has_useful_sentence_on_day(self, day):
+        def has_useful_sentence_on_day(self, day, target):
             """
             Checks whether a useful sentence was said on a given day,  useful
             when we want to check agreement or disagreement.
             A useful sentence is each sentence that is neither "skip" or "over"
             :param day:
+            :param target
             :return: List of all talk numbers of useful sentences said in the given day.
             """
             talk_numbers_on_day = []
             for talk_number, sentence in self.talk_number_to_sentences.items():
-                if TalkNumber.is_on_day(talk_number, day):
+                if TalkNumber.is_on_day(talk_number, day) and sentence.message.subject != target:
                     talk_numbers_on_day.append(talk_number)
 
             return talk_numbers_on_day
