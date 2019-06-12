@@ -19,6 +19,9 @@ class RequestVoteTask(BaseTask):
     def update_importance_based_on_day(self, day):
         self._importance *= DISCOUNT * (day - self._day)
 
+    def get_hater(self):
+        return self._hater
+
     def get_type(self):
         return TaskType.REQUEST_VOTE_TYPE
 

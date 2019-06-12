@@ -8,8 +8,12 @@ class RoleEstimations(object):
     class __RoleEstimations(object):
 
         def __init__(self, indices, my_index):
+            self.reset(indices, my_index)
+
+        def reset(self, indices, my_index):
             self._estimations = {idx: [] for idx in indices}
             self.index = my_index
+
 
         def add_estimations(self, idx, roles):
             for role in roles:

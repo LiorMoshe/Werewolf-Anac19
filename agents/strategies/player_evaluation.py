@@ -25,12 +25,15 @@ class PlayerEvaluation(object):
 
 
         def __init__(self, indices, my_idx):
+            self.reset(indices, my_idx)
+
+        def reset(self, indices, my_idx):
             self._weights = {idx: 1 for idx in indices}
             self._weights[my_idx] = EPSILON
             self.index = my_idx
             self._relevant_players = [idx for idx in indices]
-
             self._liars = {}
+
 
         def player_lied(self, idx, potential_liars):
             for i in range(len(potential_liars)):
@@ -62,7 +65,19 @@ class PlayerEvaluation(object):
             return self._relevant_players
 
         def get_dangerous_agent(self):
-            return max(self._weights.items(), key=itemgetter(1))[0]
+            """
+            Get the most dangerous agent among the relevant players.
+            :return:
+            """
+            max_weight = float('-inf')
+            max_idx = None
+
+            for idx in self._relevant_players:
+                if self._weights[idx] > max_weight:
+                    max_weight = self._weights[idx]
+                    max_idx = idx
+
+            return max_idx
 
         def player_died_werewolf(self, idx):
             """
@@ -81,9 +96,6 @@ class PlayerEvaluation(object):
 
         def thinks_im_werewolf(self, idx):
             self._weights[idx] = WEREWOLF_FINE / 2
-
-
-
 
         def log(self):
             Logger.instance.write("PlayerEvaluation: " + str(self._weights))
@@ -122,6 +134,7 @@ class PlayerEvaluation(object):
 
             # Look at the most dangerous agent.
             dangerous_idx = self.get_dangerous_agent()
+            print("Dangerous idx: " + str(dangerous_idx))
             dangerous_node = game_graph.get_node(dangerous_idx)
             Logger.instance.write("Dangerous: " + str(dangerous_idx) + " num haters: " + str(dangerous_node.num_haters()))
             # If less than third of the players don't like him, gain traction by creating a task against him.
@@ -134,8 +147,6 @@ class PlayerEvaluation(object):
         def day_passed(self):
             for idx in self._weights:
                 self._weights[idx] /= 2
-
-
 
     instance = None
 

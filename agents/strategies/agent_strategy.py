@@ -188,6 +188,8 @@ class TownsFolkStrategy(object):
         if message_type == MessageType.FINISH:
             # visualize(game_graph)
             SentencesContainer.instance.clean()
+            PlayerEvaluation.instance.reset(self._agent_indices, self._index)
+            RoleEstimations.instance.reset(self._agent_indices, self._index)
 
         # At the end of the day reset the scores accumulated by the vote model.
         if request == "DAILY_FINISH":
