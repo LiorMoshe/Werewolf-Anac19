@@ -9,6 +9,10 @@ class GameRoles(Enum):
     POSSESSED = 5,
     MEDIUM = 6
 
+    def __str__(self):
+        return Enum.__str__(self).split('.', 1)[1]
+
 
 # All the roles that only one agent can have.
-SPECIAL_ROLES = [GameRoles.SEER, GameRoles.BODYGUARD, GameRoles.MEDIUM]
+SPECIAL_ROLES = ['SEER', 'BODYGUARD', 'MEDIUM']
+

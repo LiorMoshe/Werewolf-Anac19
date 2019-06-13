@@ -21,23 +21,48 @@ class Cooperator(object):
     show the same level of fondness as requesting everyone to agree with a given statement.
     """
 
-    def __init__(self, index, history):
+    def __init__(self, index, history, initial_fondness = 0.0):
         self.index = index
         self._fondness_history = history
         self._was_updated = False
-        self._total_fondness = 0.0
+        self._total_fondness = initial_fondness
+        self._initial_fondness = initial_fondness
 
     def update_fondness(self, fondness, message):
         message_fondness = MessageFondness(message, fondness)
         return self.update(message_fondness)
 
     def update(self, message_fondness):
+        """
+        We only apply discounting for messages coming from the players.
+        If we update ht
+        :param message_fondness:
+        :return:
+        """
+
         if message_fondness.message.day in self._fondness_history.keys():
             self._fondness_history[message_fondness.message.day].append(message_fondness)
         else:
             self._fondness_history[message_fondness.message.day] = [message_fondness]
         self._was_updated = True
         return self
+
+    def has_message_fondness(self, message_fondness):
+        """
+        Given a message fondness check if we have it in our history.
+        :param message_fondness:
+        :return:
+        """
+        message = message_fondness.message
+        if message.day in self._fondness_history.keys():
+            for curr_fondness in self._fondness_history[message_fondness.message.day]:
+                curr_message = curr_fondness.message
+
+                if message.type == curr_message.type and message.subject == curr_message.subject \
+                        and message.target == curr_message.target:
+                    return True
+
+        return False
 
 
     def merge_cooperators(self, cooperator):
@@ -51,7 +76,8 @@ class Cooperator(object):
 
         for messages in cooperator.get_history().values():
             for message_fondness in messages:
-                self.update(message_fondness)
+                if not self.has_message_fondness(message_fondness):
+                    self.update(message_fondness)
 
     def get_history(self):
         return self._fondness_history
@@ -60,7 +86,7 @@ class Cooperator(object):
         if not self._was_updated:
             return self._total_fondness
         else:
-            self._total_fondness = 0.0
+            self._total_fondness = self._initial_fondness
             for day, messages_fondness in self._fondness_history.items():
                 distance = current_day - day
                 for message_fondness in messages_fondness:
@@ -98,11 +124,11 @@ class Enemy(object):
     The hostility level will be discounted based on the number of days that have passed since it was last seen.
     """
 
-    def __init__(self, index, history):
+    def __init__(self, index, history, initial_hostility = 0.0):
         self.index = index
         self._hostility_history = history
-        Logger.instance.write("Created new Enemy " + str(self.index) + "  initial history: " + str(self._hostility_history))
-        self._total_hostility = 0.0
+        self._initial_hostility = initial_hostility
+        self._total_hostility = initial_hostility
         self._was_updated = False
 
     def update_hostility(self, hostility, message):
@@ -126,13 +152,30 @@ class Enemy(object):
         if not self._was_updated:
             return self._total_hostility
         else:
-            self._total_hostility = 0.0
+            self._total_hostility = self._initial_hostility
             for day, message_hostilities in self._hostility_history.items():
                 distance = current_day - day
                 for message_hostility in message_hostilities:
                     self._total_hostility += pow(HOSTILITY_DISCOUNT_FACTOR, distance) * message_hostility.hostility
             self._was_updated = False
             return self._total_hostility
+
+    def has_message_hostility(self, message_hostility):
+        """
+        Given a message hostility check if we have it in our history.
+        :param message_hostility:
+        :return:
+        """
+        message = message_hostility.message
+        if message.day in self._hostility_history.keys():
+            for curr_hostility in self._hostility_history[message_hostility.message.day]:
+                curr_message = curr_hostility.message
+
+                if message.type == curr_message.type and message.subject == curr_message.subject \
+                    and message.target == curr_message.target:
+                    return True
+
+        return False
 
     def get_history(self):
         return self._hostility_history
@@ -146,12 +189,11 @@ class Enemy(object):
         if self.index != enemy.index:
             raise Exception("Can't merge enemies with different indices: " + str(self.index) + " and " + str(enemy.index))
 
-        print("Merging enemy index: " + str(enemy.index))
 
         for message_hostilities in enemy.get_history().values():
-            print(message_hostilities)
             for message_hostility in message_hostilities:
-                self.update(message_hostility)
+                if not self.has_message_hostility(message_hostility):
+                    self.update(message_hostility)
 
     def convert_to_cooperator(self):
         """
@@ -165,6 +207,19 @@ class Enemy(object):
             for message_hostility in self._hostility_history[day]:
                 fondness_history[day].append(MessageFondness(message_hostility.message, -message_hostility.hostility))
         return Cooperator(self.index, fondness_history)
+
+    def scale(self, factor):
+        """
+        Scale all value of hostility of the player by a given factor.
+        :param factor:
+        :return:
+        """
+        for day, message_hostilities in self._hostility_history.items():
+            for message_hostility in message_hostilities:
+                message_hostility._replace(hostility=message_hostility.hostility * factor)
+        self._was_updated = True
+        return self
+
 
     def __eq__(self, other):
         return self.index == other.index

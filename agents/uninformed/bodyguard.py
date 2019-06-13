@@ -3,7 +3,7 @@ from agents.information_processing.agent_perspective import AgentStatus
 import aiwolfpy.contentbuilder as cb
 from agents.game_roles import GameRoles
 import numpy as np
-from agents.information_processing.agent_strategy import TownsFolkStrategy
+from agents.strategies.agent_strategy import TownsFolkStrategy
 
 DEFAULT_MODE = 0
 RISK_MODE = 1
@@ -22,7 +22,7 @@ class Bodyguard(Villager):
         self._strategy = TownsFolkStrategy([i for i in range(1, self._game_settings._player_num)
                             if i != self._base_info._agentIndex],
                             self._base_info._agentIndex,
-                            self._base_info._role_map, self._player_perspective)
+                            self._base_info._role_map)
 
     def getName(self):
         return "Bodyguard"
