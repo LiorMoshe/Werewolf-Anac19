@@ -54,6 +54,7 @@ class TownsFolkStrategy(object):
         self._agent_indices = agent_indices
         self._day = 1
 
+        # Used for tasks that can be done only once per day.
         self._done_in_day = False
 
         # Initialize the sentences container singleton
@@ -186,7 +187,7 @@ class TownsFolkStrategy(object):
 
         # Note: In case you try running several games together you cant use the visualization.
         if message_type == MessageType.FINISH:
-            # visualize(game_graph)
+            visualize(game_graph)
             SentencesContainer.instance.clean()
             PlayerEvaluation.instance.reset(self._agent_indices, self._index)
             RoleEstimations.instance.reset(self._agent_indices, self._index)
@@ -201,6 +202,7 @@ class TownsFolkStrategy(object):
             updated_scores = game_graph.get_players_voting_scores()
             for agent_idx, score in updated_scores.items():
                 self._vote_model.update_vote(agent_idx, score)
+
 
     def update_votes_after_death(self, idx):
         """
