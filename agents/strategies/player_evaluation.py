@@ -1,7 +1,7 @@
 from operator import itemgetter
 from agents.tasks.request_vote_task import RequestVoteTask
 from agents.logger import Logger
-from itertools import combinations
+import random
 
 EPSILON = 0.01
 
@@ -33,6 +33,7 @@ class PlayerEvaluation(object):
             self.index = my_idx
             self._relevant_players = [idx for idx in indices]
             self._liars = {}
+            self._last_dead_agent = None
 
 
         def player_lied(self, idx, potential_liars):
@@ -59,10 +60,17 @@ class PlayerEvaluation(object):
             """
             # We don't use list.remove because we want our relevant players object to be immutable so we create
             # a copy and remove the index from it.
+            self._last_dead_agent = idx
             self._relevant_players = [player_idx for player_idx in self._relevant_players if player_idx != idx]
+
+        def get_last_dead(self):
+            return self._last_dead_agent
 
         def get_relevant_players(self):
             return self._relevant_players
+
+        def players_alive(self):
+            return len(self._relevant_players)
 
         def get_dangerous_agent(self):
             """
@@ -78,6 +86,25 @@ class PlayerEvaluation(object):
                     max_idx = idx
 
             return max_idx
+
+        def get_divine_target(self, num_candidates= 3):
+            """
+            Get top 3 dangerous agents and choose randomly between them.
+            :return:
+            """
+            sorted_weights = sorted(self._weights.items(), key=itemgetter(1), reverse=True)
+            candidates = []
+            threshold = num_candidates
+
+            for idx, _ in sorted_weights:
+                if idx in self._relevant_players:
+                    candidates.append(idx)
+
+                    if len(candidates) == threshold:
+                        break
+
+            return random.choice(candidates)
+
 
         def player_died_werewolf(self, idx):
             """
@@ -134,7 +161,6 @@ class PlayerEvaluation(object):
 
             # Look at the most dangerous agent.
             dangerous_idx = self.get_dangerous_agent()
-            print("Dangerous idx: " + str(dangerous_idx))
             dangerous_node = game_graph.get_node(dangerous_idx)
             Logger.instance.write("Dangerous: " + str(dangerous_idx) + " num haters: " + str(dangerous_node.num_haters()))
             # If less than third of the players don't like him, gain traction by creating a task against him.

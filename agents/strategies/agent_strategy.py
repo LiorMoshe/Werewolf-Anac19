@@ -12,6 +12,10 @@ from agents.vote.townsfolk_vote_model import TownsfolkVoteModel
 from agents.states.state_type import StateType
 from agents.strategies.player_evaluation import PlayerEvaluation
 from agents.strategies.role_estimations import RoleEstimations
+from agents.tasks.guard_task import GuardTask
+from agents.tasks.vote_task import VoteTask
+from agents.tasks.divine_task import DivineTask
+from agents.tasks.identify_task import IdentifyTask
 import numpy as np
 
 # These sentences currently, don't help us much (maybe will be used in future dev).
@@ -53,6 +57,7 @@ class TownsFolkStrategy(object):
         self._index = my_index
         self._agent_indices = agent_indices
         self._day = 1
+        self._role = role_map[str(self._index)]
 
         # Used for tasks that can be done only once per day.
         self._done_in_day = False
@@ -79,15 +84,21 @@ class TownsFolkStrategy(object):
 
         self._vote_model = TownsfolkVoteModel(agent_indices, my_index)
 
+        # Save here all players with special roles we currently trust.
+        self._special_roles = {}
+
     def handle_message(self, message, game_graph):
         """
         Given a message directed towards our agent decide whether we should handle it in some form.
         It can be either by adjusting weights in our voter model or in the form of a future task.
         This is only relevant to request or inquires.
+        We only handle inquires and requests relevant for villagers, meaning questions like who we votes
+        for and can we do some special action won't be answered.
         :param message:
         :param game_graph
         :return:
         """
+        tasks = []
         if message.type == SentenceType.REQUEST:
             Logger.instance.write("GOT REQUEST MESSAGE TO ME " + str(message.original_message))
             if message.content.type == SentenceType.VOTE:
@@ -95,8 +106,15 @@ class TownsFolkStrategy(object):
 
 
         elif message.type == SentenceType.INQUIRE:
-            #todo - currently we don't answer inquires.
-            pass
+            Logger.instance.write("GOT REQUEST MESSAGE TO ME " + str(message.original_message))
+            if message.content.type == SentenceType.VOTE and message.content.target == "ANY":
+                if message.subject in game_graph.get_node(self._index).get_top_k_cooperators(k=3):
+                    target = self._vote_model.get_vote()
+                    tasks.append(VoteTask(1, self._day, [target], self._index, target))
+
+        return tasks
+
+
 
     def handle_messages_to_me(self, game_graph):
         """
@@ -105,10 +123,12 @@ class TownsFolkStrategy(object):
         :param game_graph
         :return:
         """
+        tasks = []
         for idx, perspective in self._perspectives.items():
             messages_to_me = perspective.get_and_clean_messages_to_me(self._day)
             for message in messages_to_me:
-                self.handle_message(message, game_graph)
+                tasks += self.handle_message(message, game_graph)
+        return tasks
 
     def update(self, diff_data, request):
         """
@@ -119,6 +139,7 @@ class TownsFolkStrategy(object):
         self._group_finder.clean_groups()
         day = None
         message_type = None
+
         for i in range(len(diff_data.index)):
             curr_index = diff_data.loc[i, 'agent']
             agent_sentence = diff_data.loc[i, 'text']
@@ -184,10 +205,11 @@ class TownsFolkStrategy(object):
 
 
         self.update_state()
+        self.update_roles()
 
         # Note: In case you try running several games together you cant use the visualization.
         if message_type == MessageType.FINISH:
-            visualize(game_graph)
+            # visualize(game_graph)
             SentencesContainer.instance.clean()
             PlayerEvaluation.instance.reset(self._agent_indices, self._index)
             RoleEstimations.instance.reset(self._agent_indices, self._index)
@@ -212,6 +234,20 @@ class TownsFolkStrategy(object):
         """
         PlayerEvaluation.instance.player_died_werewolf(idx)
 
+    def update_roles(self):
+        """
+        Update the special roles of players tracked through the game, if a player lied remove him
+        from our mapping otherwise add his new role to the mapping
+        :return:
+        """
+        for idx, perspective in self._perspectives.items():
+            admitted_role = perspective.get_admitted_role()
+            if perspective.get_liar_score() == 0 and admitted_role is not None:
+                self._special_roles[admitted_role["role"]] = idx
+            elif perspective.get_liar_score() > 0 and admitted_role["role"] in self._special_roles:
+                del self._special_roles[admitted_role["role"]]
+
+
 
     def handle_estimations(self, game_graph):
         """
@@ -223,17 +259,18 @@ class TownsFolkStrategy(object):
         for idx, perspective in self._perspectives.items():
 
             if perspective.get_status() == AgentStatus.ALIVE and perspective.has_estimations():
-                estimations = perspective.get_estimations()
+
+                    estimations = perspective.get_estimations()
 
 
-                Logger.instance.write("Checking estimations of Agent" + str(idx))
-                if game_graph.get_node(self._index).get_top_k_cooperators(k=3):
-                    Logger.instance.write("Agent" + str(self._index) + " is a cooperator, listening to estimations: " + str(estimations))
-                    for agent_idx, estimation in estimations.items():
-                        if estimation == "WEREWOLF":
-                            PlayerEvaluation.instance.player_is_werewolf(agent_idx)
-                        elif estimation == "HUMAN":
-                            PlayerEvaluation.instance.player_in_townsfolk(agent_idx)
+                    Logger.instance.write("Checking estimations of Agent" + str(idx))
+                    if idx in game_graph.get_node(self._index).get_top_k_cooperators(k=3):
+                        Logger.instance.write("Agent" + str(self._index) + " is a cooperator, listening to estimations: " + str(estimations))
+                        for agent_idx, estimation in estimations.items():
+                            if estimation == "WEREWOLF":
+                                PlayerEvaluation.instance.player_is_werewolf(agent_idx)
+                            elif estimation == "HUMAN":
+                                PlayerEvaluation.instance.player_in_townsfolk(agent_idx)
 
     def talk(self):
         """
@@ -255,7 +292,8 @@ class TownsFolkStrategy(object):
         :return:
         """
         tasks = self._lie_detector.find_matching_admitted_roles(self._perspectives, day)
-        self.handle_messages_to_me(game_graph)
+
+        tasks += self.handle_messages_to_me(game_graph)
 
         if not self._done_in_day:
             request_vote_task = PlayerEvaluation.instance.update_evaluation(game_graph, day)
@@ -263,8 +301,27 @@ class TownsFolkStrategy(object):
             if request_vote_task is not None:
                 tasks.append(request_vote_task)
 
+            if "BODYGUARD" in self._special_roles and self._role != "BODYGUARD":
+                print("Creating bodyguard task")
+
+                tasks.append(GuardTask.generate_guard_task(game_graph, self._index, self._special_roles["BODYGUARD"],
+                                                           PlayerEvaluation.instance.players_alive(), 1, self._day))
+
+            if "SEER" in self._special_roles and self._role != "SEER":
+                print("Creating seer task")
+
+                tasks.append(DivineTask.generate_divine_task(self._index, self._special_roles["SEER"], 1, self._day))
+
+            if "MEDIUM" in self._special_roles and self._role != "MEDIUM" and PlayerEvaluation.instance.get_last_dead() is not None:
+                tasks.append(IdentifyTask(1, self._day, [self._special_roles["MEDIUM"], PlayerEvaluation.instance.get_last_dead()],
+                                          self._index, self._special_roles["MEDIUM"], PlayerEvaluation.instance.get_last_dead()))
+
+
+
             self._done_in_day = True
         return tasks
+
+
 
 
     def update_state(self):
