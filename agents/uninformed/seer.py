@@ -14,7 +14,7 @@ class Seer(Villager):
                                 base_info["statusMap"], self._player_perspective)
 
     def talk(self):
-        print("Called  TALK")
+        # print("Called  TALK")
         if self._base_info.is_alive(1):
             return "COMINGOUT Agent[01] WEREWOLF"
         elif self._base_info.is_alive(2):

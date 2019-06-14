@@ -232,6 +232,9 @@ class AgentPerspective(object):
         Logger.instance.write("Detected lie for agent: " + str(self._index))
         self._liar_score += 1
 
+    def get_liar_score(self):
+        return self._liar_score
+
     def log_perspective(self):
         Logger.instance.write("Logging perspective of agent: " + str(self._index))
         for idx, cooperator in self._cooperators.items():

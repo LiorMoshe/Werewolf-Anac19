@@ -7,9 +7,12 @@ OR = "OR"
 NOT = "NOT"
 BECAUSE = "BECAUSE"
 REQUEST = "REQUEST"
+DIVINATION = "DIVINATION"
+IDENTIFY = "IDENTIFY"
+GUARD = "GUARD"
 
 def index_to_str(index):
-    return "Agent[" + "{0:02d}".format(index) if index != "ANY" else 'ANY'
+    return "Agent[" + "{0:02d}".format(index) + "]" if index != "ANY" else 'ANY'
 
 def wrap(sentence):
     return "(" + sentence + ")"
@@ -52,3 +55,13 @@ def estimate_bad_guys(*targets):
 
 def request_sentence(target, sentence):
     return " ".join([REQUEST, index_to_str(target), sentence])
+
+
+def divination(target):
+    return " ".join([DIVINATION, index_to_str(target)])
+
+def identify(target):
+    return " ".join([IDENTIFY, index_to_str(target)])
+
+def guard(target):
+    return " ".join([GUARD, index_to_str(target)])
