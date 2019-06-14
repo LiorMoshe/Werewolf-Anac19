@@ -229,7 +229,7 @@ class SentenceDissector(object):
             elif content.type == SentenceType.VOTE:
                 hostility = 4 if message.target == "ANY" else 1.5
                 dissected_sentence.update_enemy(self.create_enemy(content, hostility=hostility))
-            elif content.type == SentenceType.DIVINE:
+            elif content.type == SentenceType.DIVINATION:
                 hostility = 0.5 if message.target == "ANY" else 0.25
                 dissected_sentence.update_enemy(self.create_enemy(content, hostility=hostility))
             elif content.type == SentenceType.GUARD:
@@ -348,7 +348,7 @@ class SentenceDissector(object):
 
             if effect.type == SentenceType.VOTE:
                 dissected_sentence.update_enemy(self.create_enemy(effect, hostility=2 / scale))
-            elif effect.type == SentenceType.DIVINE:
+            elif effect.type == SentenceType.DIVINATION:
                 dissected_sentence.update_cooperator(self.create_enemy(effect, hostility=1 / scale))
             elif effect.type == SentenceType.GUARD:
                 dissected_sentence.update_cooperator(self.create_cooperator(effect, fondness=1 / scale))

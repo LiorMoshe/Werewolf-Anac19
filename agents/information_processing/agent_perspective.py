@@ -148,6 +148,7 @@ class AgentPerspective(object):
         """
 
         Logger.instance.write("Dissecting Message: " + str(message.original_message))
+        print("Dissecting Message: " + str(message.original_message))
 
         result = SentenceDissector.instance.dissect_sentence(message, talk_number, day)
 
@@ -170,12 +171,13 @@ class AgentPerspective(object):
         idx_to_estimations = result.get_estimations()
         if len(idx_to_estimations) != 0:
             for idx, estimation in idx_to_estimations.items():
-                self._estimations[idx] = self._estimations[idx].union(estimation)
+                if idx in self._estimations:
+                    self._estimations[idx] = self._estimations[idx].union(estimation)
 
-                if "WEREWOLF" in estimation:
-                    self.update_enemy(Enemy(idx, {}, initial_hostility=2))
-                elif "HUMAN" in estimation:
-                    self.update_cooperator(Cooperator(idx, {}, initial_fondness=2))
+                    if "WEREWOLF" in estimation:
+                        self.update_enemy(Enemy(idx, {}, initial_hostility=2))
+                    elif "HUMAN" in estimation:
+                        self.update_cooperator(Cooperator(idx, {}, initial_fondness=2))
 
 
     def get_estimations(self):
