@@ -13,10 +13,6 @@ class Seer(Villager):
                                 self._base_info._role_map,
                                 base_info["statusMap"], self._player_perspective)
 
-    def talk(self):
-        print("Called  TALK")
-        return self._strategy.talk()
-
     def whisper(self):
         return ""
 

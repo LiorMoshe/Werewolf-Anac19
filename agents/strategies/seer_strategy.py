@@ -4,6 +4,7 @@ from agents.information_processing.sentences_container import SentencesContainer
 from agents.game_roles import GameRoles
 from agents.information_processing.dissection.sentence_dissector import SentenceDissector
 from agents.strategies.agent_strategy import TownsFolkStrategy, MessageType
+from agents.tasks.seer_task import SeerTask
 import numpy as np 
 import pandas as pd
 
@@ -34,6 +35,7 @@ class SeerStrategy(TownsFolkStrategy):
     DECAY_FACTOR = 0.9
     PROB_OF_REVEAL = 0.7
     PROB_OF_REVEAL_ALL = 0.4
+    PROB_OF_COMINGOUT = 0.6
 
     def __init__(self, agent_indices, my_index, role_map, statusMap, player_perspective):
         super().__init__(agent_indices, my_index, role_map)
@@ -55,8 +57,14 @@ class SeerStrategy(TownsFolkStrategy):
                 self._divine_prospects[agent] = 0
         
         self._player_perspective = player_perspective
+        
+        self._seer_tasks = []
 
-        self._skip_counter = 0
+        # how many agents cameout as seers at current day
+        self.count_seer_comingout = 0
+
+        # how many times agents named me as a werewolf
+        self.werewolf_accused_counter = 0
 
     def update_divine_result(self, agent, species):
         # no longer a prospect
@@ -138,6 +146,8 @@ class SeerStrategy(TownsFolkStrategy):
                 pass
 
         self.requested_divine.clear()
+        self.werewolf_accused_counter = 0
+        self.count_seer_comingout = 0
         
         # if somehow the prospect list is empty
         if (len(self._divine_prospects.keys()) == 0):
@@ -201,13 +211,25 @@ class SeerStrategy(TownsFolkStrategy):
         feature_vec[9] = known_humans_in_non_cooperators
         feature_vec[10] = likely_humans_in_non_cooperators
 
-    def talk(self):
+    def generate_talk(self):
+        importance = 1000
+
+        print("UNDER HEAT {}".format(self._player_perspective.under_heat_value[self.my_index]))
         if (self._player_perspective.under_heat_value[self.my_index] > 0.7):
             # comingout as seer
-            return "COMINGOUT Agent[{0:02d}] SEER".format(self.my_index)
+            task = SeerTask(importance, self.day_num, [self.my_index], self.my_index, comingout=True)
+            self._seer_tasks.append(task)
+            return
+            #return "COMINGOUT Agent[{0:02d}] SEER".format(self.my_index)
 
+        # consider to out myself if someone is comingout as seer
         coin = np.random.rand()
-        
+        if (coin > SeerStrategy.PROB_OF_COMINGOUT and self.count_seer_comingout > 0):
+            task = SeerTask(importance, self.day_num, [self.my_index], self.my_index, comingout=True)
+            self._seer_tasks.append(task)
+            return
+
+        coin = np.random.rand()        
         is_werewolf_detected = SeerStrategy.WEREWOLF in self._divined_agents.values()
         # whether to reveal info
         if (coin < SeerStrategy.PROB_OF_REVEAL and is_werewolf_detected):
@@ -230,43 +252,44 @@ class SeerStrategy(TownsFolkStrategy):
 
                     if (target is not None):
                         print("chose non cooperator")
-                        return "REQUEST Agent[{0:02d}] ".format(target) + "(ESTIMATE Agent[{0:02d}] WEREWOLF)".format(prospect)
+                        task = SeerTask(importance, self.day_num, [target, prospect], self.my_index, target=target, prospect=prospect)
+                        self._seer_tasks.append(task)
+                        return
+                        #return "REQUEST Agent[{0:02d}] ".format(target) + "(ESTIMATE Agent[{0:02d}] WEREWOLF)".format(prospect)
 
                     # check if one of the humans is in prospect's cooperators
                     target = self.get_target(prospect, humans, self._perspectives[prospect]._cooperators)
 
                     if (target is not None):
                         print("chose cooperator")
-                        return "REQUEST Agent[{0:02d}] ".format(target) + "(ESTIMATE Agent[{0:02d}] WEREWOLF)".format(prospect)
+                        task = SeerTask(importance, self.day_num, [target, prospect], self.my_index, target=target, prospect=prospect)
+                        self._seer_tasks.append(task)
+                        return
+                        #return "REQUEST Agent[{0:02d}] ".format(target) + "(ESTIMATE Agent[{0:02d}] WEREWOLF)".format(prospect)
 
                     # else - send to random human
                     target = str(np.random.choice(humans))
                     print("chose random")
-                    return "REQUEST Agent[{0:02d}] ".format(target) + "(ESTIMATE Agent[{0:02d}] WEREWOLF)".format(prospect)
+                    task = SeerTask(importance, self.day_num, [target, prospect], self.my_index, target=target, prospect=prospect)
+                    self._seer_tasks.append(task)
+                    return
+                    #return "REQUEST Agent[{0:02d}] ".format(target) + "(ESTIMATE Agent[{0:02d}] WEREWOLF)".format(prospect)
                 else:
                     # no humans
                     print("chose everybody")
-                    return "REQUEST ANY (ESTIMATE Agent[{0:02d}] WEREWOLF)".format(prospect)
+                    target = "ANY"
+                    task = SeerTask(importance, self.day_num, [target, prospect], self.my_index, target=target, prospect=prospect)
+                    self._seer_tasks.append(task)
+                    return
+                    #return "REQUEST ANY (ESTIMATE Agent[{0:02d}] WEREWOLF)".format(prospect)
             else:
                 # tell everybody about prospect
                 print("chose everybody")
-                return "REQUEST ANY (ESTIMATE Agent[{0:02d}] WEREWOLF)".format(prospect)
-        else:
-            # not revealing information but we are aware of werewolves
-            if (is_werewolf_detected):
-                print("not revealing but werewolves exist")
-                return self.choose_random_sentence(werewolves_exist=True)
-            else:
-                print("not revealing no werewolves")
-                return self.choose_random_sentence()
-
-    def choose_random_sentence(self, werewolves_exist=False):
-        if (werewolves_exist):
-            sentences = ["Skip"]
-        else:
-            sentences = ["Skip", "Over"]
-
-        return np.random.choice(sentences)
+                target = "ANY"
+                task = SeerTask(importance, self.day_num, [target, prospect], self.my_index, target=target, prospect=prospect)
+                self._seer_tasks.append(task)
+                return
+                #return "REQUEST ANY (ESTIMATE Agent[{0:02d}] WEREWOLF)".format(prospect)
 
     def get_target(self, agent, known_humans, agent_dict):
         ls = []
@@ -344,7 +367,36 @@ class SeerStrategy(TownsFolkStrategy):
                 if (agent == pretender and agent != self.my_index):
                     print("PRETENDER {} {}".format(agent, pretender))
                     self._perspectives[agent].lie_detected()
+                    self.count_seer_comingout += 1
 
+            # check if i'm under attack - agents are trying to vote me out
+            substr = "VOTE Agent[{0:02d}]".format(self.my_index)
+            if ("REQUEST" in row["text"] and substr in row["text"]):
+                self._player_perspective.under_heat_value[self.my_index] += 1
+            
+            # if people view me as a werewolf
+            substr = "Agent[{0:02d}] WEREWOLF"
+            if (substr in row["text"]):
+                self._player_perspective.under_heat_value[self.my_index] += 1
+                self.werewolf_accused_counter += 1
+
+    #override
+    def generate_tasks(self, game_graph, day):
+        tasks = super().generate_tasks(game_graph, day)
+
+        # add my tasks
+        tasks.extend(self._seer_tasks)
+
+        self._seer_tasks = []
+        return tasks
+
+    #override
+    def update(self, diff_data, request):
+        super().update(diff_data, request)
+
+        if (request == "TALK"):
+            # preprare tasks
+            self.generate_talk()
 
 '''
 DIVINE STRATEGY
@@ -399,5 +451,10 @@ else, pick top 3 suspects in prospects and vote to the one with the highest chan
 to be executed.
 
 highest chance = known previous votes + risk 
+
+
+
+1. consider comingout as seer if someone else did
+2. fix under heat level.. maybe use an internal variable
 
 '''

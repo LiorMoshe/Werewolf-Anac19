@@ -9,7 +9,7 @@ BECAUSE = "BECAUSE"
 REQUEST = "REQUEST"
 
 def index_to_str(index):
-    return "Agent[" + "{0:02d}".format(index) if index != "ANY" else 'ANY'
+    return "Agent[" + "{0:02d}]".format(index) if index != "ANY" else 'ANY'
 
 def wrap(sentence):
     return "(" + sentence + ")"
