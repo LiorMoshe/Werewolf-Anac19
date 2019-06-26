@@ -37,8 +37,8 @@ class MessageType(Enum):
     ATTACK = 6,
     WHISPER = 7,
     FINISH = 8,
-    DIVINE = 9
-
+    DIVINE = 9,
+    IDENTIFY = 10
 
 class TownsFolkStrategy(object):
     """
@@ -129,13 +129,13 @@ class TownsFolkStrategy(object):
             Logger.instance.write("Got sentence: " + str(agent_sentence) + " from agent " + str(curr_index)  + '\n')
 
             #only seer and medium players will see
-            if message_type == MessageType.DIVINE:
+            if message_type == MessageType.DIVINE or message_type == MessageType.IDENTIFY:
                 print("DIVINE MESSAGE RECEIVED")
                 parsed_sentence = self._message_parser.process_sentence(agent_sentence, curr_index, day,
                                                                         talk_number)
                 # store divined results
                 self.update_divine_result(parsed_sentence.target, parsed_sentence.species)
-
+                
             if curr_index in self._perspectives.keys():
                 if agent_sentence not in UNUSEFUL_SENTENCES:
                     Logger.instance.write("Got Sentence: " + agent_sentence + '\n')

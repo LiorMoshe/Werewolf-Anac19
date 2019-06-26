@@ -148,6 +148,7 @@ class SeerStrategy(TownsFolkStrategy):
         self.requested_divine.clear()
         self.werewolf_accused_counter = 0
         self.count_seer_comingout = 0
+        self._player_perspective.under_heat_value[self.my_index] *= SeerStrategy.DECAY_FACTOR
         
         # if somehow the prospect list is empty
         if (len(self._divine_prospects.keys()) == 0):
@@ -213,12 +214,16 @@ class SeerStrategy(TownsFolkStrategy):
 
     def generate_talk(self):
         importance = 1000
+        heat_comingout = 12
 
         print("UNDER HEAT {}".format(self._player_perspective.under_heat_value[self.my_index]))
-        if (self._player_perspective.under_heat_value[self.my_index] > 0.7):
+        if (self._player_perspective.under_heat_value[self.my_index] > heat_comingout):
             # comingout as seer
             task = SeerTask(importance, self.day_num, [self.my_index], self.my_index, comingout=True)
             self._seer_tasks.append(task)
+
+            heat = self._player_perspective.under_heat_value[self.my_index] - 3
+            self._player_perspective.under_heat_value[self.my_index] = max(0, heat)
             return
             #return "COMINGOUT Agent[{0:02d}] SEER".format(self.my_index)
 
@@ -372,11 +377,13 @@ class SeerStrategy(TownsFolkStrategy):
             # check if i'm under attack - agents are trying to vote me out
             substr = "VOTE Agent[{0:02d}]".format(self.my_index)
             if ("REQUEST" in row["text"] and substr in row["text"]):
+                print("WANTED TO VOTE ME")
                 self._player_perspective.under_heat_value[self.my_index] += 1
             
             # if people view me as a werewolf
             substr = "Agent[{0:02d}] WEREWOLF"
             if (substr in row["text"]):
+                print("CALLED ME WOLF")
                 self._player_perspective.under_heat_value[self.my_index] += 1
                 self.werewolf_accused_counter += 1
 
