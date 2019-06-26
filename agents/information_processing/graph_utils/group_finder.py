@@ -26,6 +26,7 @@ class PlayerNode(object):
     def __init__(self, idx):
         self.index = idx
 
+
         # Use the role for visualization
         self.role = None
         self.clean()
@@ -112,38 +113,43 @@ class PlayerNode(object):
         Logger.instance.write("top k: " + str(res))
         return [idx for idx in res if cooperators_weights[idx] != 0]
 
-    def evaluate(self):
+    def evaluate(self, reversed_context=False):
         """
         Perform an evaluation of this players state in the game based on the edges in the graph
         We will give a low negative score for cooperation edges and high positive score for non cooperation edges.
         This shows the state of each player in the game - how many players liked him and hate him
         when the players are factored by how much do we think they are dangerous to us.
+        :param reversed_context Used when we in fact wish to evaluate the opinions of our enemies about this agent.
+        Notice that we divide each edge weight by our player evaluation without reversed context which means
+        likely werewolves don't get much weight, in reversed weight we do the opposite.
         :return:
         """
 
         evaluation = 0.0
 
+        factor_func = lambda agent_idx: 1 / PlayerEvaluation.instance.get_weight(agent_idx) if not reversed_context else PlayerEvaluation.instance.get_weight(agent_idx)
+
         for edge in self.get_incoming_edges():
             if edge.type == EdgeType.LIKE:
-                evaluation += LIKED_SCALE * edge.weight / PlayerEvaluation.instance.get_weight(edge.from_index)
+                evaluation += LIKED_SCALE * edge.weight * factor_func(edge.from_index)
             else:
-                evaluation += HATE_SCALE * edge.weight / PlayerEvaluation.instance.get_weight(edge.from_index)
+                evaluation += HATE_SCALE * edge.weight * factor_func(edge.from_index)
 
         for edge in self.undirected_edges:
             idx = edge.from_index if edge.from_index != self.index else edge.to_index
             if edge.type == EdgeType.LIKE:
-                evaluation += LIKED_SCALE * edge.weight / PlayerEvaluation.instance.get_weight(idx)
+                evaluation += LIKED_SCALE * edge.weight * factor_func(idx)
 
             else:
-                evaluation += HATE_SCALE * edge.weight / PlayerEvaluation.instance.get_weight(idx)
+                evaluation += HATE_SCALE * edge.weight * factor_func(idx)
 
         for edge in self.get_outgoing_edges():
             if edge.type == EdgeType.LIKE:
-                evaluation += LIKED_SCALE * edge.weight / PlayerEvaluation.instance.get_weight(edge.to_index)
+                evaluation += LIKED_SCALE * edge.weight * factor_func(edge.to_index)
             else:
-                evaluation += HATE_SCALE * edge.weight / PlayerEvaluation.instance.get_weight(edge.to_index)
+                evaluation += HATE_SCALE * edge.weight * factor_func(edge.to_index)
 
-        Logger.instance.write("Evalutating node " + str(self.index) + " got evaluation score of " + str(evaluation))
+        Logger.instance.write("Evaluating node " + str(self.index) + " got evaluation score of " + str(evaluation))
 
         return evaluation
 

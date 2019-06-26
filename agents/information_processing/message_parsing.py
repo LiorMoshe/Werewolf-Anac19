@@ -67,7 +67,7 @@ class SentenceType(Enum):
     DISAGREE = 6,
     ATTACK = 7,
     GUARD = 8,
-    DIVINE = 9,
+    DIVINATION = 9,
     VOTE = 10,
     ATTACKED = 11,
     GUARDED = 12,
@@ -83,7 +83,7 @@ class SentenceType(Enum):
 
 KNOWLEDGE = [SentenceType.ESTIMATE, SentenceType.COMINGOUT]
 
-ACTIONS = [SentenceType.ATTACK, SentenceType.GUARD, SentenceType.DIVINE, SentenceType.VOTE]
+ACTIONS = [SentenceType.ATTACK, SentenceType.GUARD, SentenceType.DIVINATION, SentenceType.VOTE]
 
 ACTION_RESULT = [SentenceType.ATTACKED, SentenceType.GUARDED, SentenceType.DIVINED, SentenceType.VOTED]
 
@@ -107,7 +107,7 @@ Knowledge = namedtuple('Knowledge', 'subject target role type reason day describ
 
 KNOWLEDGE_TYPES = ['ESTIMATE', 'COMINGOUT']
 
-AVAILABLE_ACTIONS = ['DIVINATION', 'GUARD', 'VOTE', 'ATTACK']
+AVAILABLE_ACTIONS = ['DIVINATION', 'GUARD', 'VOTE', 'ATTACK', "IDENTIFY"]
 
 AVAILABLE_ACTION_RESULTS = ['DIVINED', 'IDENTIFIED', 'GUARDED', 'VOTED', 'ATTACKED']
 
