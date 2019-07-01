@@ -2,6 +2,7 @@ from agents.informed.informed import Informed
 from agents.strategies.agent_strategy import TownsFolkStrategy
 #from agents.information_processing.agent_strategy import WolfStrategy
 from agents.strategies.WolfStrategy import WolfStrategy
+from agents.strategies.WolfStrategy import TeamStrategy
 import numpy as np
 
 
@@ -16,6 +17,7 @@ class Werewolf(Informed):  #TODO - how to anderstend and evluate the masseges
                             if i != self._base_info._agentIndex],
                             self._base_info._agentIndex,
                             self._base_info._role_map)
+        #self._teem = TeamStrategy(1,2,3)
 
     def getName(self):
         return "Werewolf"
@@ -24,23 +26,25 @@ class Werewolf(Informed):  #TODO - how to anderstend and evluate the masseges
         return "COMINGOUT Agent[01] SEER"
 
     def whisper(self):
-        if len(self._base_info._role_map) <= 1:
-            pass
-        if self._base_info._day == 0:
-            return self._strategy._teammatestrategy.dayone()
+        return ""
+        # pass
+        # if len(self._base_info._role_map) <= 1:
+        #     pass
+        # if self._base_info._day == 0:
+        #     pass#self._teem.dayone()
 
         #my attack shoud happen once affter voting in day
 
-        if len(self.react) > 0:
-            return self.anser()
-        elif len(self.conflict) > 0:
-            return self.resolve_conflict()
-        elif self.next_attack == None:
-            get_best_agent_for_me_or_team = 1  #TODO - REQUEST ANY (IDENTIFIED Agent1 [species])” or if at risk
-            reason="I dont know"
-            return f"BECAUSE ({reason}) (ATTACK Agent{get_best_agent_for_me_or_team})"  #because ()() anter args
-        else:
-            return "OVER"
+        # if len(self.react) > 0:
+        #     return self.anser()
+        # elif len(self.conflict) > 0:
+        #     return self.resolve_conflict()
+        # elif self.next_attack == None:
+        #     get_best_agent_for_me_or_team = 1  #TODO - REQUEST ANY (IDENTIFIED Agent1 [species])” or if at risk
+        #     reason="I dont know"
+        #     return f"BECAUSE ({reason}) (ATTACK Agent{get_best_agent_for_me_or_team})"  #because ()() anter args
+        # else:
+        #     return "OVER"
         #tree or pass or new task?
         return #f"AND (REQUEST ANY (COMINGOUT Agent{} [{}])(REQUEST ANY (COMINGOUT Agent{} [{}])"
 
