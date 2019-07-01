@@ -24,9 +24,10 @@ class MessageType(Enum):
     EXECUTE = 3,
     DEAD = 4,
     ATTACK_VOTE = 5,
-    WHISPER = 6,
-    FINISH = 7,
-    DIVINE = 8
+    ATTACK = 6,
+    WHISPER = 7,
+    FINISH = 8,
+    DIVINE = 9
 
 
 class TownsFolkStrategy(object):
@@ -56,9 +57,11 @@ class TownsFolkStrategy(object):
         for i in range(len(diff_data.index)):
             curr_index = diff_data.loc[i, 'agent']
             agent_sentence = diff_data.loc[i, 'text']
-            talk_number = diff_data.loc[i, 'idx']
+            idx = diff_data.loc[i, 'idx']
+            turn = diff_data.loc[i, 'turn']
             day = diff_data.loc[i, 'day']
             message_type = MessageType[diff_data.loc[i, 'type'].upper()]
+            talk_number = TalkNumber(day, turn, idx)
 
             # only seer and medium players will see
             if message_type == MessageType.DIVINE:

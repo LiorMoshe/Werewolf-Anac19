@@ -10,10 +10,11 @@ class SentencesContainer(object):
         self.talk_number_to_sentences = {}
 
     def add_sentence(self, talk_number, sentence):
-        if talk_number not in self.talk_number_to_sentences.keys():
-            self.talk_number_to_sentences[talk_number] = [sentence]
+        key_val = str(talk_number)
+        if key_val not in self.talk_number_to_sentences.keys():
+            self.talk_number_to_sentences[key_val] = [sentence]
         else:
-            self.talk_number_to_sentences[talk_number].append(sentence)
+            self.talk_number_to_sentences[key_val].append(sentence)
 
     def get_sentence(self, talk_number):
-        return self.talk_number_to_sentences[talk_number]
+        return self.talk_number_to_sentences[str(talk_number)]
