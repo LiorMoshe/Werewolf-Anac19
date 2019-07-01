@@ -1,5 +1,5 @@
 from agents.uninformed.villager import Villager
-from agents.information_processing.agent_strategy import TownsFolkStrategy
+from agents.strategies.agent_strategy import TownsFolkStrategy
 
 # gets the identity of the voted player each day
 
@@ -35,5 +35,5 @@ class Medium(Villager):
     def guard(self):
         pass
 
-    def extract_state_info(self, base_info):
+    def extract_state_info(self, base_info, diff_data, request):
         pass

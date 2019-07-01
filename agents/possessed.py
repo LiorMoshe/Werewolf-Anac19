@@ -1,6 +1,6 @@
 from agents.uninformed.villager import Villager
 from agents.informed.werewolf import Werewolf
-from agents.information_processing.agent_strategy import TownsFolkStrategy
+from agents.strategies.agent_strategy import TownsFolkStrategy
 
 class Possessed(Villager, Werewolf):
 
@@ -34,5 +34,5 @@ class Possessed(Villager, Werewolf):
     def guard(self):
         pass
 
-    def extract_state_info(self, base_info):
+    def extract_state_info(self, base_info, diff_data, request):
         pass

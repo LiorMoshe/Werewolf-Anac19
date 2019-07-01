@@ -1,5 +1,5 @@
 from agents.uninformed.villager import Villager
-from agents.information_processing.agent_strategy import SeerStrategy
+from agents.strategies.agent_strategy import SeerStrategy
 
 class Seer(Villager):
 
@@ -7,14 +7,14 @@ class Seer(Villager):
         pass
 
     def init_strategy(self, base_info, diff_data, game_setting):
-        self._strategy = SeerStrategy([i for i in range(1, self._game_settings._player_num)
+        self._strategy = SeerStrategy([i for i in range(1, self._game_settings._player_num + 1)
                                 if i != self._base_info._agentIndex],
                                 self._base_info._agentIndex,
                                 self._base_info._role_map,
-                                base_info["statusMap"])
+                                base_info["statusMap"], self._player_perspective)
 
     def talk(self):
-        print("Called  TALK")
+        # print("Called  TALK")
         if self._base_info.is_alive(1):
             return "COMINGOUT Agent[01] WEREWOLF"
         elif self._base_info.is_alive(2):
@@ -37,7 +37,7 @@ class Seer(Villager):
     def guard(self):
         pass
 
-    def extract_state_info(self, base_info):
+    def extract_state_info(self, base_info, diff_data, request):
         pass
 
 

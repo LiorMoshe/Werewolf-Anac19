@@ -1,5 +1,7 @@
 from agents.informed.informed import Informed
-from agents.information_processing.agent_strategy import WolfStrategy
+from agents.strategies.agent_strategy import TownsFolkStrategy
+#from agents.information_processing.agent_strategy import WolfStrategy
+from agents.strategies.WolfStrategy import WolfStrategy
 import numpy as np
 
 
@@ -46,8 +48,9 @@ class Werewolf(Informed):  #TODO - how to anderstend and evluate the masseges
         return "1"
 
     def attack(self):
-        attack_chosen = np.random.choice([my_attack, team_attack,spichel_attack], p=[my_risk, team_risk,random_risk])
-        return str(attack_chosen)
+        #attack_chosen = np.random.choice([my_attack, team_attack,spichel_attack], p=[my_risk, team_risk,random_risk])
+        #return str(attack_chosen)
+        return "1"
 
     def divine(self):
         pass
@@ -55,7 +58,7 @@ class Werewolf(Informed):  #TODO - how to anderstend and evluate the masseges
     def guard(self):
         pass
 
-    def extract_state_info(self, base_info):
+    def extract_state_info(self, base_info, diff_data, request):
         pass
 
     def get_bff(self):
