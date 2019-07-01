@@ -1,5 +1,5 @@
 from agents.uninformed.villager import Villager
-from agents.strategies.agent_strategy import SeerStrategy
+from agents.strategies.seer_strategy import SeerStrategy
 
 class Seer(Villager):
 
@@ -13,20 +13,11 @@ class Seer(Villager):
                                 self._base_info._role_map,
                                 base_info["statusMap"], self._player_perspective)
 
-    def talk(self):
-        # print("Called  TALK")
-        if self._base_info.is_alive(1):
-            return "COMINGOUT Agent[01] WEREWOLF"
-        elif self._base_info.is_alive(2):
-            return "COMINGOUT Agent[02] WEREWOLF"
-        elif self._base_info.is_alive(3):
-            return "COMINGOUT Agent[03] WEREWOLF"
-
     def whisper(self):
         return ""
 
     def vote(self):
-        return "1"
+        return self._strategy.vote()
 
     def attack(self):
         pass
@@ -38,6 +29,5 @@ class Seer(Villager):
         pass
 
     def extract_state_info(self, base_info, diff_data, request):
-        pass
-
+        self._strategy.digest_sentences(diff_data)
 
