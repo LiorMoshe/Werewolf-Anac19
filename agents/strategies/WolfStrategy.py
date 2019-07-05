@@ -275,28 +275,32 @@ class WolfStrategy(TownsFolkStrategy):
         """
         :return:
         """
+        # return "BECAUSE (DAY 1 (DIVINED Agent[05] WEREWOLF)) (ESTIMATE Agent[01] WEREWOLF)"
         max_accusing_value = 1
         if self.werewolf_accused_counter > max_accusing_value:
             top_accusing = max(self.accusing, key=self.accusing.get)
             if self.accusing[top_accusing]:
-                sentence = "BEACAUSE ({accusing_sentence}) (ESTIMATE Agent[{0:02d}] WEREWOLF)".\
+                sentence = "BECAUSE ({accusing_sentence}) (ESTIMATE Agent[{0:02d}] WEREWOLF)".\
                     format(top_accusing, accusing_sentence=self.accusing[top_accusing])
                 Logger.instance.write("I Said: " + sentence)
-                print("??????????????????????????????????????????????????????????????")
-                print(sentence)
+                # print("??????????????????????????????????????????????????????????????")
+                # print(sentence)
                 self.accusing[top_accusing] = ""
+                self.werewolf_accused_counter = 0
                 return sentence
 
-        max_heat_value = 2
+        max_heat_value = 10
         if self._player_perspective.under_heat_value[self._index] > max_heat_value:
             worst_enemy = max(self.enemies, key=self.enemies.get)
-            self.enemies[worst_enemy] -= 2
-            self._player_perspective.under_heat_value[self._index] -= 3
-            # print("??????????????????????????????????????????????????????????????")
-            # print("REQUEST ANY (VOTE Agent[{0:02d}])".format(worst_enemy))
-            sentence = "REQUEST ANY (VOTE Agent[{0:02d}])".format(worst_enemy)
-            Logger.instance.write("I Said: " + sentence)
-            return sentence
+            if self.enemies[worst_enemy]:
+                self.enemies[worst_enemy] -= 4
+                self._player_perspective.under_heat_value[self._index] -= 3
+                # print("??????????????????????????????????????????????????????????????")
+                # print("REQUEST ANY (VOTE Agent[{0:02d}])".format(worst_enemy))
+                sentence = "REQUEST ANY (VOTE Agent[{0:02d}])".format(worst_enemy)
+                Logger.instance.write("I Said: " + sentence)
+                return sentence
+
         else:
             sentence = self._agent_state.talk(self._task_manager)
             Logger.instance.write("I Said: " + sentence)
@@ -304,31 +308,32 @@ class WolfStrategy(TownsFolkStrategy):
 
     def digest_sentences(self, diff_data):
         for i, row in diff_data.iterrows():
-            # check if i'm under attack - agents are trying to vote me out
-            substr = "VOTE Agent[{0:02d}]".format(self._index)
-            if "REQUEST" in row["text"] and substr in row["text"]:
-                Logger.instance.write(str(row["agent"]) + "WANTED TO VOTE ME")
-                print(row["agent"], "WANTED TO VOTE ME")
-                self._player_perspective.under_heat_value[self._index] += 1
-                if row["agent"] in self.enemies.keys():
-                    self.enemies[row["agent"]] += 1
-                # print(self.enemies)
-                # print(self._player_perspective.under_heat_value[self._index])
+            if row["agent"] != self._index:
+                # check if i'm under attack - agents are trying to vote me out
+                substr = "VOTE Agent[{0:02d}]".format(self._index)
+                if "REQUEST" in row["text"] and substr in row["text"]:
+                    Logger.instance.write(str(row["agent"]) + "WANTED TO VOTE ME")
+                    print(row["agent"], "WANTED TO VOTE ME")
+                    self._player_perspective.under_heat_value[self._index] += 1
+                    if row["agent"] in self.enemies.keys():
+                        self.enemies[row["agent"]] += 1
+                    # print(self.enemies)
+                    # print(self._player_perspective.under_heat_value[self._index])
 
-            # if people view me as a werewolf
-            substr = "Agent[{0:02d}] WEREWOLF".format(self._index)
-            if substr in row["text"]:
-                Logger.instance.write(str(row["agent"]) + "CALLED ME WOLF")
-                print(row["agent"], "CALLED ME WOLF")
-                self._player_perspective.under_heat_value[self._index] += 1
-                self.werewolf_accused_counter += 1
-                if row["agent"] in self.enemies.keys():
-                    self.enemies[row["agent"]] += 1
-                if row["agent"] in self.accusing.keys():
-                    self.accusing[row["agent"]] = row["text"]
+                # if people view me as a werewolf
+                substr = "DIVINED Agent[{0:02d}] WEREWOLF".format(self._index)
+                if substr in row["text"]:
+                    Logger.instance.write(str(row["agent"]) + "CALLED ME WOLF")
+                    print(row["agent"], "CALLED ME WOLF")
+                    self._player_perspective.under_heat_value[self._index] += 1
+                    self.werewolf_accused_counter += 1
+                    if row["agent"] in self.enemies.keys():
+                        self.enemies[row["agent"]] += 1
+                    if row["agent"] in self.accusing.keys():
+                        self.accusing[row["agent"]] = substr
 
-                # print(self.enemies)
-                # print(self._player_perspective.under_heat_value[self._index])
+                    # print(self.enemies)
+                    # print(self._player_perspective.under_heat_value[self._index])
 
 
 
