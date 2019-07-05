@@ -53,7 +53,7 @@ class WolfStrategy(TownsFolkStrategy):
     inspects moves of werewolves teammates through the night and day.
     """
 
-    def __init__(self, agent_indices, my_index, role_map):
+    def __init__(self, agent_indices, my_index, role_map, player_perspective):
         self.humens = [i for i in agent_indices if not str(i) in role_map.keys()]
         if len(agent_indices) > 5:
             self._teammates_strategy = TeamStrategy([i for i in role_map.keys()],my_index) #pass task menge
@@ -68,12 +68,14 @@ class WolfStrategy(TownsFolkStrategy):
         self._agent_indices = agent_indices
         self._day = 1 # 0
         self._role = role_map[str(self._index)]
+        self._player_perspective = player_perspective
 
         # Used for tasks that can be done only once per day.
         self._done_in_day = False
 
         # Initialize the sentences container singleton
         SentencesContainer()
+        SentencesContainerNight()
 
         # Initialize the singleton sentences dissector.
         SentenceDissector(my_index) #TODO: check!
@@ -94,7 +96,7 @@ class WolfStrategy(TownsFolkStrategy):
         # for idx in role_map:
         #     self._teammates[idx] = AgentPerspective(idx, my_index, len(role_map), role_map[idx])
 
-        #self._group_finder = GroupFinder(agent_indices + [my_index], my_index)
+        self._group_finder = GroupFinder(agent_indices + [my_index], my_index)
 
         self._lie_detector = LieDetector(my_index, agent_indices, role_map[str(my_index)])
         self._night_task_manager = TaskManager()
@@ -103,6 +105,7 @@ class WolfStrategy(TownsFolkStrategy):
         self._vote_model = wolfVoteModel(self._perspectives, my_index)
         self._special_roles = {}
         self.werewolf_accused_counter = 0
+        self.enemies = {i: 0 for i in self.humens}
 
 
     def update(self, diff_data, request):
@@ -281,17 +284,24 @@ class WolfStrategy(TownsFolkStrategy):
     def digest_sentences(self, diff_data):
         for i, row in diff_data.iterrows():
             # check if i'm under attack - agents are trying to vote me out
-            substr = "VOTE Agent[{0:02d}]".format(self.my_index)
+            substr = "VOTE Agent[{0:02d}]".format(self._index)
             if ("REQUEST" in row["text"] and substr in row["text"]):
                 print("WANTED TO VOTE ME")
-                self._player_perspective.under_heat_value[self.my_index] += 1
+                print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                print(row)
+                self._player_perspective.under_heat_value[self._index] += 1
+                self.enemies[row["agent"]] += 1
 
             # if people view me as a werewolf
             substr = "Agent[{0:02d}] WEREWOLF"
             if (substr in row["text"]):
                 print("CALLED ME WOLF")
-                self._player_perspective.under_heat_value[self.my_index] += 1
+                print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                print(row)
+                self._player_perspective.under_heat_value[self._index] += 1
                 self.werewolf_accused_counter += 1
+                self.enemies[row["agent"]] += 1
+
 
 
 from enum import Enum

@@ -16,7 +16,7 @@ class Werewolf(Informed):  #TODO - how to anderstend and evluate the masseges
         self._strategy = WolfStrategy([i for i in range(1, self._game_settings._player_num)
                             if i != self._base_info._agentIndex],
                             self._base_info._agentIndex,
-                            self._base_info._role_map)
+                            self._base_info._role_map, self._player_perspective)
         #self._teem = TeamStrategy(1,2,3)
 
     def getName(self):
@@ -63,7 +63,7 @@ class Werewolf(Informed):  #TODO - how to anderstend and evluate the masseges
         pass
 
     def extract_state_info(self, base_info, diff_data, request):
-        pass
+        self._strategy.digest_sentences(diff_data)
 
     def get_bff(self):
         vote_for = self.get_best_vote_opt()
