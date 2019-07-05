@@ -12,10 +12,7 @@ from agents.vote.wolf_vote_model import wolfVoteModel
 from agents.states.state_type import StateType
 from agents.strategies.player_evaluation import PlayerEvaluation
 from agents.strategies.role_estimations import RoleEstimations
-from agents.tasks.guard_task import GuardTask
 from agents.tasks.vote_task import VoteTask
-from agents.tasks.divine_task import DivineTask
-from agents.tasks.identify_task import IdentifyTask
 import numpy as np
 from agents.strategies.agent_strategy import TownsFolkStrategy
 
@@ -54,7 +51,9 @@ class WolfStrategy(TownsFolkStrategy):
     """
 
     def __init__(self, agent_indices, my_index, role_map, player_perspective):
-        self.humens = [i for i in agent_indices if not str(i) in role_map.keys()]
+        self._humans = [i for i in agent_indices if not str(i) in role_map.keys()]
+        self._wolves = [i for i in role_map.keys()]
+
         if len(agent_indices) > 5:
             self._teammates_strategy = TeamStrategy([i for i in role_map.keys()],my_index) #pass task menge
             # self._agent_state = whisperOne(my_index, agent_indices)
@@ -86,13 +85,13 @@ class WolfStrategy(TownsFolkStrategy):
 
         self._perspectives = {}
         self._teammates = {}
-        for idx in agent_indices:
+
+        for idx in self._agent_indices:
             self._perspectives[idx] = AgentPerspective(idx, my_index, len(agent_indices) + 1,
                                                        None if idx not in role_map.keys() else role_map[idx])
-
-        for idx in agent_indices:
+        for idx in self._wolves:
             self._teammates[idx] = AgentPerspective(idx, my_index, len(agent_indices) + 1,
-                                                       None if idx not in role_map.keys() else role_map[idx])
+                                                   None if idx not in role_map.keys() else role_map[idx])
         # for idx in role_map:
         #     self._teammates[idx] = AgentPerspective(idx, my_index, len(role_map), role_map[idx])
 
@@ -105,9 +104,9 @@ class WolfStrategy(TownsFolkStrategy):
         self._vote_model = wolfVoteModel(self._perspectives, my_index)
         self._special_roles = {}
         self._werewolf_accused_counter = 0
-        self._enemies = {i: 0 for i in self.humens}
+        self._enemies = {i: 0 for i in self._humans}
         self._enemies_substr = "VOTE Agent[{0:02d}]".format(self._index)
-        self._accusing = {i: "" for i in self.humens}
+        self._accusing = {i: "" for i in self._humans}
         self._accusing_substrs = ["DIVINED Agent[{0:02d}] WEREWOLF".format(self._index),
                                  "ESTIMATE Agent[{0:02d}] WEREWOLF".format(self._index)]
 
@@ -137,8 +136,7 @@ class WolfStrategy(TownsFolkStrategy):
             talk_number = TalkNumber(day, turn, idx)
             Logger.instance.write("Got sentence: " + str(agent_sentence) + " from agent " + str(curr_index) + '\n')
 
-
-            if curr_index in self._perspectives.keys():
+            if curr_index in self._humans:
                 if agent_sentence not in UNUSEFUL_SENTENCES:
                     Logger.instance.write("Got Sentence: " + agent_sentence + '\n')
                     parsed_sentence = self._message_parser.process_sentence(agent_sentence, curr_index, day,
@@ -158,6 +156,7 @@ class WolfStrategy(TownsFolkStrategy):
                         del self._enemies[curr_index]
                     if curr_index in self._accusing:
                         del self._accusing[curr_index]
+                    self._humans.remove(curr_index)
                 elif message_type == MessageType.DEAD:
                     self._perspectives[curr_index].update_status(AgentStatus.DEAD_WEREWOLVES)
                     self._vote_model.update_dead_agent(curr_index)
@@ -166,6 +165,7 @@ class WolfStrategy(TownsFolkStrategy):
                         del self._enemies[curr_index]
                     if curr_index in self._accusing:
                         del self._accusing[curr_index]
+                    self._humans.remove(curr_index)
 
                 elif message_type == MessageType.ATTACK_VOTE:#TODO
                     print("Got attack vote when I am in townsfolk, BUG.")
@@ -178,25 +178,28 @@ class WolfStrategy(TownsFolkStrategy):
                 self._perspectives[curr_index].switch_sides(day)
 
 
-            elif curr_index in self._teammates.keys() and curr_index != self._index:
+            elif curr_index in self._wolves and curr_index != self._index:
                 if agent_sentence not in UNUSEFUL_SENTENCES:
                     Logger.instance.write("Got Sentence: " + agent_sentence + '\n')
                     parsed_sentence = self._message_parser.process_sentence(agent_sentence, curr_index, day,
                                                                             talk_number)
                 if message_type == MessageType.TALK:
                     if agent_sentence not in UNUSEFUL_SENTENCES:
-                        self._perspectives[curr_index].update_perspective(parsed_sentence, talk_number, day)
+                        self._teammates[curr_index].update_perspective(parsed_sentence, talk_number, day)
                 elif message_type == MessageType.VOTE:
-                    self._perspectives[curr_index].update_vote(parsed_sentence)
+                    self._teammates[curr_index].update_vote(parsed_sentence)
                 elif message_type == MessageType.EXECUTE:
-                    self._perspectives[curr_index].update_status(AgentStatus.DEAD_TOWNSFOLK)
+                    self._teammates[curr_index].update_status(AgentStatus.DEAD_TOWNSFOLK)
                     self._vote_model.update_dead_agent(curr_index)
                     print("AGENT" + str(self._index) + " Player " + str(curr_index) + " died by villagers")
                     PlayerEvaluation.instance.player_died(curr_index)
+                    self._wolves.remove(curr_index)
                 elif message_type == MessageType.DEAD:
-                    self._perspectives[curr_index].update_status(AgentStatus.DEAD_WEREWOLVES)
+                    self._teammates[curr_index].update_status(AgentStatus.DEAD_WEREWOLVES)
                     self._vote_model.update_dead_agent(curr_index)
                     self.update_votes_after_death(curr_index)
+                    self._wolves.remove(curr_index)
+
 
                 elif message_type == MessageType.ATTACK_VOTE: #TODO
                     print("Got attack vote when I am in townsfolk, BUG.")
@@ -259,7 +262,7 @@ class WolfStrategy(TownsFolkStrategy):
         if self._werewolf_accused_counter > max_accusing_value:
             top_accusing = max(self._accusing, key=self._accusing.get)
             if self._accusing[top_accusing]:
-                sentence = "BECAUSE ({accusing_sentence}) (ESTIMATE Agent[{0:02d}] WEREWOLF)".\
+                sentence = "BECAUSE ({accusing_sentence}) (REQUEST ANY (ESTIMATE Agent[{0:02d}] WEREWOLF))".\
                     format(top_accusing, accusing_sentence=self._accusing[top_accusing])
                 Logger.instance.write("I Said: " + sentence)
                 self._accusing[top_accusing] = ""
@@ -284,7 +287,7 @@ class WolfStrategy(TownsFolkStrategy):
 
     def digest_sentences(self, diff_data):
         for i, row in diff_data.iterrows():
-            if row["agent"] != self._index:
+            if row["agent"] != self._index and row["agent"] not in self._wolves:
                 # check if i'm under attack - agents are trying to vote me out
                 substr = self._enemies_substr
                 if "REQUEST" in row["text"] and substr in row["text"]:
