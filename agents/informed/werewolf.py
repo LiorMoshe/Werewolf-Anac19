@@ -23,7 +23,7 @@ class Werewolf(Informed):  #TODO - how to anderstend and evluate the masseges
         return "Werewolf"
 
     def talk(self):
-        return self._strategy.talk()
+        return self._strategy.generate_talk()
 
     def whisper(self):
         return ""
