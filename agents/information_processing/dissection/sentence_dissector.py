@@ -157,29 +157,39 @@ class SentenceDissector(object):
             """
             result = DissectedSentence(message, talk_number, day)
             if message.type == SentenceType.ESTIMATE or message.type == SentenceType.COMINGOUT:
+                print("here is the problam1")
                 if message.target == message.subject:
                     result.admitted_role = {"role": message.role, "reason": message}
                 elif GameRoles[message.role] == GameRoles.WEREWOLF or GameRoles[message.role] == GameRoles.POSSESSED:
                     result.enemy = self.create_enemy(message, hostility=1 / scale)
 
             elif message.type == SentenceType.VOTE:
+                print("here is the problam2")
                 result.enemy = self.create_enemy(message, hostility=1.5 / scale)
 
             elif message.type == SentenceType.REQUEST:
+                print("here is the problam3")
                 self.update_based_on_request(message, talk_number, result)
             elif message.type == SentenceType.INQUIRE:
+                print("here is the problam4")
                 self.update_based_on_inquire(message, result)
             elif message.type == SentenceType.BECAUSE:
+                print("here is the problam5")
                 self.update_because_sentence(message, talk_number, result)
             elif message.type == SentenceType.AGREE or message.type == SentenceType.DISAGREE:
+                print("here is the problam6")
                 self.update_based_on_opinion(message, talk_number, result)
             elif message.type == SentenceType.XOR:
+                print("here is the problam7")
                 self.update_based_on_xor(message, talk_number, result)
             elif message.type == SentenceType.OR:
+                print("here is the problam8")
                 self.update_based_on_or(message, talk_number, result)
             elif message.type == SentenceType.NOT:
+                print("here is the problam9")
                 self.update_based_on_not(message, talk_number, result)
             elif message.type == SentenceType.AND:
+                print("here is the problam10")
                 self.update_based_on_and(message, talk_number, result)
             # elif message.type == SentenceType.IDENTIFIED:
             #     result.estimations[message.target] = message.role
@@ -242,6 +252,7 @@ class SentenceDissector(object):
             elif content.type == SentenceType.NOT:
                 self.update_based_on_not(message, talk_number, dissected_sentence)
             elif content.type == SentenceType.ATTACK or content.type == SentenceType.IDENTIFIED:
+                print("here is the problam")
                 # TODO - Unsure if it's needed only used between werewolves, it's obvious they are cooperators.
                 pass
 

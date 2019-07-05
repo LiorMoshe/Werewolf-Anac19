@@ -2,7 +2,7 @@ import random
 from agents.logger import Logger
 from operator import itemgetter
 
-class TownsfolkVoteModel(object):
+class wolfVoteModel(object):
     """
     This model holds all the logic that helps a Townsfolk player decide who to vote
     for. This is used in the TownsfolkStrategy when we have to decide who to vote for.
@@ -32,6 +32,8 @@ class TownsfolkVoteModel(object):
         self._vote_scores[agent_idx] = abs(max_score) * 2
 
     def update_dead_agent(self, idx):
+        if idx not in self._vote_scores.keys():
+            return
         """
         When an agent dies we don't want to consider him in the voting system anymore.
         :param idx:
