@@ -105,6 +105,7 @@ class WolfStrategy(TownsFolkStrategy):
         self._special_roles = {}
         self._werewolf_accused_counter = 0
         self._enemies = {i: 0 for i in self._humans}
+        self._enemies_quoats = {i: "" for i in self._humans}
         self._enemies_substr = "VOTE Agent[{0:02d}]".format(self._index)
         self._accusing = {i: "" for i in self._humans}
         self._accusing_substrs = ["DIVINED Agent[{0:02d}] WEREWOLF".format(self._index),
@@ -269,14 +270,13 @@ class WolfStrategy(TownsFolkStrategy):
                 self._werewolf_accused_counter = 0
                 return sentence
 
-        max_heat_value = 12
+        max_heat_value = 10
         if self._player_perspective.under_heat_value[self._index] > max_heat_value:
             worst_enemy = max(self._enemies, key=self._enemies.get)
-            if self._enemies[worst_enemy]:
+            if self._enemies[worst_enemy] and self._enemies_quoats[worst_enemy]:
                 self._player_perspective.under_heat_value[self._index] -= 8
-                # print("??????????????????????????????????????????????????????????????")
-                # print("REQUEST ANY (VOTE Agent[{0:02d}])".format(worst_enemy))
-                sentence = "REQUEST ANY (VOTE Agent[{0:02d}])".format(worst_enemy)
+                sentence = "BECAUSE ({accusing_sentence}) (REQUEST ANY (VOTE Agent[{0:02d}]))".\
+                    format(worst_enemy, accusing_sentence=self._enemies_quoats[worst_enemy])
                 Logger.instance.write("I Said: " + sentence)
                 return sentence
 
@@ -287,29 +287,34 @@ class WolfStrategy(TownsFolkStrategy):
 
     def digest_sentences(self, diff_data):
         for i, row in diff_data.iterrows():
-            if row["agent"] != self._index and row["agent"] not in self._wolves:
+            talking_agent_idx = row["agent"]
+            if talking_agent_idx != self._index and talking_agent_idx not in self._wolves:
                 # check if i'm under attack - agents are trying to vote me out
                 substr = self._enemies_substr
                 if "REQUEST" in row["text"] and substr in row["text"]:
-                    Logger.instance.write(str(row["agent"]) + "WANTED TO VOTE ME")
-                    print(row["agent"], "WANTED TO VOTE ME")
+                    Logger.instance.write(str(talking_agent_idx) + "WANTED TO VOTE ME")
+                    print(talking_agent_idx, "WANTED TO VOTE ME")
                     self._player_perspective.under_heat_value[self._index] += 1
-                    if row["agent"] in self._enemies.keys():
-                        self._enemies[row["agent"]] += 1
-                    self._vote_model.set_to_max_score(row["agent"])
+                    if talking_agent_idx in self._enemies.keys():
+                        self._enemies[talking_agent_idx] += 1
+                        self._enemies_quoats[talking_agent_idx] = "DAY {day} ({substr})".format(day=str(self._day),
+                                                                                                substr=substr)
+                    self._vote_model.set_to_max_score(talking_agent_idx)
 
                 # if people view me as a werewolf
                 substrs = self._accusing_substrs
-                if any(substr in row["text"] for substr in substrs):
-                    Logger.instance.write(str(row["agent"]) + "CALLED ME WOLF")
-                    print(row["agent"], "CALLED ME WOLF")
-                    self._player_perspective.under_heat_value[self._index] += 1
-                    self._werewolf_accused_counter += 1
-                    if row["agent"] in self._enemies.keys():
-                        self._enemies[row["agent"]] += 1
-                    if row["agent"] in self._accusing.keys():
-                        self._accusing[row["agent"]] = "DAY {day} ({substr})".format(day=str(self._day), substr=substr)
-                    self._vote_model.set_to_max_score(row["agent"])
+                for substr in substrs:
+                    if substr in row["text"]:
+                        Logger.instance.write(str(talking_agent_idx) + "CALLED ME WOLF")
+                        print(talking_agent_idx, "CALLED ME WOLF")
+                        self._player_perspective.under_heat_value[self._index] += 1
+                        self._werewolf_accused_counter += 1
+                        if talking_agent_idx in self._enemies.keys():
+                            self._enemies[row["agent"]] += 1
+                        if talking_agent_idx in self._accusing.keys():
+                            self._accusing[talking_agent_idx] = "DAY {day} ({substr})".format(day=str(self._day),
+                                                                                              substr=substr)
+                        self._vote_model.set_to_max_score(talking_agent_idx)
 
 
 
