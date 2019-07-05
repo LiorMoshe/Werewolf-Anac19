@@ -262,18 +262,15 @@ class WolfStrategy(TownsFolkStrategy):
                 sentence = "BECAUSE ({accusing_sentence}) (ESTIMATE Agent[{0:02d}] WEREWOLF)".\
                     format(top_accusing, accusing_sentence=self._accusing[top_accusing])
                 Logger.instance.write("I Said: " + sentence)
-                # print("??????????????????????????????????????????????????????????????")
-                # print(sentence)
                 self._accusing[top_accusing] = ""
                 self._werewolf_accused_counter = 0
                 return sentence
 
-        max_heat_value = 10
+        max_heat_value = 12
         if self._player_perspective.under_heat_value[self._index] > max_heat_value:
             worst_enemy = max(self._enemies, key=self._enemies.get)
             if self._enemies[worst_enemy]:
-                self._enemies[worst_enemy] -= 4
-                self._player_perspective.under_heat_value[self._index] -= 5
+                self._player_perspective.under_heat_value[self._index] -= 8
                 # print("??????????????????????????????????????????????????????????????")
                 # print("REQUEST ANY (VOTE Agent[{0:02d}])".format(worst_enemy))
                 sentence = "REQUEST ANY (VOTE Agent[{0:02d}])".format(worst_enemy)
@@ -296,8 +293,7 @@ class WolfStrategy(TownsFolkStrategy):
                     self._player_perspective.under_heat_value[self._index] += 1
                     if row["agent"] in self._enemies.keys():
                         self._enemies[row["agent"]] += 1
-                    # print(self.enemies)
-                    # print(self._player_perspective.under_heat_value[self._index])
+                    self._vote_model.set_to_max_score(row["agent"])
 
                 # if people view me as a werewolf
                 substrs = self._accusing_substrs
@@ -309,10 +305,8 @@ class WolfStrategy(TownsFolkStrategy):
                     if row["agent"] in self._enemies.keys():
                         self._enemies[row["agent"]] += 1
                     if row["agent"] in self._accusing.keys():
-                        self._accusing[row["agent"]] = substr
-
-                    # print(self.enemies)
-                    # print(self._player_perspective.under_heat_value[self._index])
+                        self._accusing[row["agent"]] = "DAY {day} ({substr})".format(day=str(self._day), substr=substr)
+                    self._vote_model.set_to_max_score(row["agent"])
 
 
 

@@ -49,7 +49,7 @@ class Werewolf(Informed):  #TODO - how to anderstend and evluate the masseges
         return #f"AND (REQUEST ANY (COMINGOUT Agent{} [{}])(REQUEST ANY (COMINGOUT Agent{} [{}])"
 
     def vote(self):
-        return "1"
+        return self._strategy.vote()
 
     def attack(self):
         #attack_chosen = np.random.choice([my_attack, team_attack,spichel_attack], p=[my_risk, team_risk,random_risk])
