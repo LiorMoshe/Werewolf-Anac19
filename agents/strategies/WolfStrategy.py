@@ -104,9 +104,12 @@ class WolfStrategy(TownsFolkStrategy):
 
         self._vote_model = wolfVoteModel(self._perspectives, my_index)
         self._special_roles = {}
-        self.werewolf_accused_counter = 0
-        self.enemies = {i: 0 for i in self.humens}
-        self.accusing = {i: "" for i in self.humens}
+        self._werewolf_accused_counter = 0
+        self._enemies = {i: 0 for i in self.humens}
+        self._enemies_substr = "VOTE Agent[{0:02d}]".format(self._index)
+        self._accusing = {i: "" for i in self.humens}
+        self._accusing_substrs = ["DIVINED Agent[{0:02d}] WEREWOLF".format(self._index),
+                                 "ESTIMATE Agent[{0:02d}] WEREWOLF".format(self._index)]
 
 
     def update(self, diff_data, request):
@@ -151,14 +154,22 @@ class WolfStrategy(TownsFolkStrategy):
                     self._vote_model.update_dead_agent(curr_index)
                     print("AGENT" + str(self._index) + " Player " + str(curr_index) + " died by villagers")
                     PlayerEvaluation.instance.player_died(curr_index)
+                    if curr_index in self._enemies:
+                        del self._enemies[curr_index]
+                    if curr_index in self._accusing:
+                        del self._accusing[curr_index]
                 elif message_type == MessageType.DEAD:
                     self._perspectives[curr_index].update_status(AgentStatus.DEAD_WEREWOLVES)
                     self._vote_model.update_dead_agent(curr_index)
                     self.update_votes_after_death(curr_index)
+                    if curr_index in self._enemies:
+                        del self._enemies[curr_index]
+                    if curr_index in self._accusing:
+                        del self._accusing[curr_index]
 
-                elif message_type == MessageType.ATTACK_VOTE:
+                elif message_type == MessageType.ATTACK_VOTE:#TODO
                     print("Got attack vote when I am in townsfolk, BUG.")
-                elif message_type == MessageType.WHISPER:
+                elif message_type == MessageType.WHISPER:#TODO
                     print("Got whisper when I am in townsfolk, BUG.")
                 elif message_type == MessageType.FINISH:
                     self._perspectives[curr_index].update_real_role(parsed_sentence.role)
@@ -187,9 +198,9 @@ class WolfStrategy(TownsFolkStrategy):
                     self._vote_model.update_dead_agent(curr_index)
                     self.update_votes_after_death(curr_index)
 
-                elif message_type == MessageType.ATTACK_VOTE:
+                elif message_type == MessageType.ATTACK_VOTE: #TODO
                     print("Got attack vote when I am in townsfolk, BUG.")
-                elif message_type == MessageType.WHISPER:
+                elif message_type == MessageType.WHISPER: #TODO
                     print("Got whisper when I am in townsfolk, BUG.")
                 elif message_type == MessageType.FINISH:
                     self._perspectives[curr_index].update_real_role(parsed_sentence.role)
@@ -239,62 +250,30 @@ class WolfStrategy(TownsFolkStrategy):
         #*********************************************************
 
 
-
-        # for i in range(len(diff_data.index)):
-        #     curr_index = diff_data.loc[i, 'agent']
-        #
-        #     if curr_index in self._perspectives.keys():
-        #         agent_sentence = diff_data.loc[i, 'text']
-        #         talk_number = diff_data.loc[i, 'idx']
-        #         message_type = MessageType[diff_data.loc[i, 'type'].upper()]
-        #         day = diff_data.loc[i, 'day']
-        #
-        #         if agent_sentence not in UNUSEFUL_SENTENCES:
-        #             parsed_sentence = self._message_parser.process_sentence(agent_sentence, curr_index, day,
-        #                                                                     talk_number)
-        #         if message_type == MessageType.TALK:
-        #             if agent_sentence not in UNUSEFUL_SENTENCES:
-        #                 self._perspectives[curr_index].update_perspective(parsed_sentence, talk_number,1)
-        #         elif message_type == MessageType.VOTE:
-        #             self._perspectives[curr_index].update_vote(parsed_sentence)
-        #         elif message_type == MessageType.EXECUTE:
-        #             self._perspectives[curr_index].update_status(AgentStatus.DEAD_TOWNSFOLK)
-        #         elif message_type == MessageType.DEAD:
-        #             self._perspectives[curr_index].update_status(AgentStatus.DEAD_WEREWOLVES)
-        #         elif message_type == MessageType.ATTACK_VOTE:
-        #             self._perspectives[curr_index].update_vote(parsed_sentence)
-        #         elif message_type == MessageType.WHISPER:
-        #             if agent_sentence not in UNUSEFUL_SENTENCES:
-        #                 self._perspectives[curr_index].update_perspective(parsed_sentence, talk_number)
-        #         elif message_type == MessageType.FINISH:
-        #             self._perspectives[curr_index].update_real_role(parsed_sentence.role)
-        #         self._perspectives[curr_index].switch_sides(day )
-        #         self._perspectives[curr_index].log_perspective()
-
     def generate_talk(self):
         """
         :return:
         """
         # return "BECAUSE (DAY 1 (DIVINED Agent[05] WEREWOLF)) (ESTIMATE Agent[01] WEREWOLF)"
         max_accusing_value = 1
-        if self.werewolf_accused_counter > max_accusing_value:
-            top_accusing = max(self.accusing, key=self.accusing.get)
-            if self.accusing[top_accusing]:
+        if self._werewolf_accused_counter > max_accusing_value:
+            top_accusing = max(self._accusing, key=self._accusing.get)
+            if self._accusing[top_accusing]:
                 sentence = "BECAUSE ({accusing_sentence}) (ESTIMATE Agent[{0:02d}] WEREWOLF)".\
-                    format(top_accusing, accusing_sentence=self.accusing[top_accusing])
+                    format(top_accusing, accusing_sentence=self._accusing[top_accusing])
                 Logger.instance.write("I Said: " + sentence)
                 # print("??????????????????????????????????????????????????????????????")
                 # print(sentence)
-                self.accusing[top_accusing] = ""
-                self.werewolf_accused_counter = 0
+                self._accusing[top_accusing] = ""
+                self._werewolf_accused_counter = 0
                 return sentence
 
         max_heat_value = 10
         if self._player_perspective.under_heat_value[self._index] > max_heat_value:
-            worst_enemy = max(self.enemies, key=self.enemies.get)
-            if self.enemies[worst_enemy]:
-                self.enemies[worst_enemy] -= 4
-                self._player_perspective.under_heat_value[self._index] -= 3
+            worst_enemy = max(self._enemies, key=self._enemies.get)
+            if self._enemies[worst_enemy]:
+                self._enemies[worst_enemy] -= 4
+                self._player_perspective.under_heat_value[self._index] -= 5
                 # print("??????????????????????????????????????????????????????????????")
                 # print("REQUEST ANY (VOTE Agent[{0:02d}])".format(worst_enemy))
                 sentence = "REQUEST ANY (VOTE Agent[{0:02d}])".format(worst_enemy)
@@ -310,27 +289,27 @@ class WolfStrategy(TownsFolkStrategy):
         for i, row in diff_data.iterrows():
             if row["agent"] != self._index:
                 # check if i'm under attack - agents are trying to vote me out
-                substr = "VOTE Agent[{0:02d}]".format(self._index)
+                substr = self._enemies_substr
                 if "REQUEST" in row["text"] and substr in row["text"]:
                     Logger.instance.write(str(row["agent"]) + "WANTED TO VOTE ME")
                     print(row["agent"], "WANTED TO VOTE ME")
                     self._player_perspective.under_heat_value[self._index] += 1
-                    if row["agent"] in self.enemies.keys():
-                        self.enemies[row["agent"]] += 1
+                    if row["agent"] in self._enemies.keys():
+                        self._enemies[row["agent"]] += 1
                     # print(self.enemies)
                     # print(self._player_perspective.under_heat_value[self._index])
 
                 # if people view me as a werewolf
-                substr = "DIVINED Agent[{0:02d}] WEREWOLF".format(self._index)
-                if substr in row["text"]:
+                substrs = self._accusing_substrs
+                if any(substr in row["text"] for substr in substrs):
                     Logger.instance.write(str(row["agent"]) + "CALLED ME WOLF")
                     print(row["agent"], "CALLED ME WOLF")
                     self._player_perspective.under_heat_value[self._index] += 1
-                    self.werewolf_accused_counter += 1
-                    if row["agent"] in self.enemies.keys():
-                        self.enemies[row["agent"]] += 1
-                    if row["agent"] in self.accusing.keys():
-                        self.accusing[row["agent"]] = substr
+                    self._werewolf_accused_counter += 1
+                    if row["agent"] in self._enemies.keys():
+                        self._enemies[row["agent"]] += 1
+                    if row["agent"] in self._accusing.keys():
+                        self._accusing[row["agent"]] = substr
 
                     # print(self.enemies)
                     # print(self._player_perspective.under_heat_value[self._index])
