@@ -33,8 +33,3 @@ class Night_one(NightAgentState):
         if task_manager.num_tasks() > 0:
             return task_manager.get_most_important_task().handle_task()
         return ""
-
-
-
-
-

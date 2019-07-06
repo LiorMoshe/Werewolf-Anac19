@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import random
 from agents.sentence_generators.question_pool import *
-from agents.information_processing.sentences_container import SentencesContainer,SentencesContainerNight
+from agents.information_processing.sentences_container import SentencesContainer
 from agents.game_roles import GameRoles
 
 """
@@ -164,7 +164,7 @@ class NightAgentState(AgentState):
         params = {}
 
         # If there is any useful sentence we can ask whether the agents agrees or disagrees.
-        useful_sentences = SentencesContainerNight.instance.has_useful_sentence_on_day(self._day, random_subject)
+        useful_sentences = SentencesContainer.instance.has_useful_sentence_on_day(self._day, random_subject)
         if len(useful_sentences) != 0:
             question_pool += [do_you_agree_with, do_you_disagree_with]
             params["talk_number"] = random.choice(useful_sentences)

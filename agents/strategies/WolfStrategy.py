@@ -1,6 +1,6 @@
 from agents.information_processing.agent_perspective import *
 from agents.information_processing.message_parsing import *
-from agents.information_processing.sentences_container import SentencesContainer, SentencesContainerNight
+from agents.information_processing.sentences_container import SentencesContainer
 from agents.information_processing.graph_utils.group_finder import GroupFinder
 from agents.information_processing.graph_utils.visualization import visualize
 from agents.states.base_state import BaseState
@@ -58,10 +58,7 @@ class WolfStrategy(TownsFolkStrategy):
 
         if len(agent_indices) > 5:
             self._teammates_strategy = TeamStrategy([i for i in role_map.keys()],my_index) #pass task menge
-            # self._agent_state = whisperOne(my_index, agent_indices)
             self._agent_night_state = Night_one(my_index, agent_indices)
-        #else:
-            #self.fake_rol = None#np.random.choice(['SEER','VILLAGER'])
         self._agent_state = DayOne(my_index, agent_indices)
         self.fake_rol = None
         self._message_parser = MessageParser()
@@ -76,12 +73,11 @@ class WolfStrategy(TownsFolkStrategy):
 
         # Initialize the sentences container singleton
         SentencesContainer()
-        SentencesContainerNight()
 
         # Initialize the singleton sentences dissector.
         SentenceDissector(my_index) #TODO: check!
 
-        PlayerEvaluation(agent_indices, self._index, self._wolves)#TODO: scores?
+        PlayerEvaluation(agent_indices, self._index, self._wolves)
 
         RoleEstimations(self._agent_indices, self._index)
 
@@ -94,8 +90,6 @@ class WolfStrategy(TownsFolkStrategy):
         for idx in self._agent_indices:
             self._teammates[idx] = AgentPerspective(idx, my_index, len(agent_indices) + 1,
                                                    None if idx not in role_map.keys() else role_map[idx])
-        # for idx in role_map:
-        #     self._teammates[idx] = AgentPerspective(idx, my_index, len(role_map), role_map[idx])
 
         self._group_finder = GroupFinder(agent_indices + [my_index], my_index)
 
@@ -147,7 +141,6 @@ class WolfStrategy(TownsFolkStrategy):
                 if message_type == MessageType.TALK:
                     if agent_sentence not in UNUSEFUL_SENTENCES:
                         self._perspectives[curr_index].update_perspective(parsed_sentence, talk_number, day)
-                        self.generate_talk()
                 elif message_type == MessageType.VOTE:
                     self._perspectives[curr_index].update_vote(parsed_sentence)
                 elif message_type == MessageType.EXECUTE:
@@ -213,7 +206,6 @@ class WolfStrategy(TownsFolkStrategy):
         if message_type == MessageType.FINISH:
             # visualize(game_graph)
             SentencesContainer.instance.clean()
-            SentencesContainerNight.instance.clean()
             PlayerEvaluation.instance.reset(self._agent_indices, self._index)
             RoleEstimations.instance.reset(self._agent_indices, self._index)
 
@@ -296,7 +288,7 @@ class WolfStrategy(TownsFolkStrategy):
         self._day += 1
         # attack_chosen = np.random.choice([my_attack, team_attack,spichel_attack], p=[my_risk, team_risk,random_risk])
         team_attack,team_risk = self._teammates_strategy.get_best_attak_for_team()
-        my_attack = self.vote()#todo - get score and risk from day talk
+        my_attack = wolfVoteModel.get_vote()
         my_risk = 0.1
         spichel_attack = np.random.choice(self._humans)
         random_risk = 0.2
