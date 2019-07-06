@@ -425,8 +425,9 @@ class GroupFinder(object):
         """
         for to_index, node in nodes.items():
             curr_edge = GameGraph.Edge(from_index, to_index, get_weight_func(node), edge_type)
-            self._agents_nodes[to_index].incoming_edges[curr_edge.get_hashable_type()] = curr_edge.weight
-            self._agents_nodes[from_index].outgoing_edges[curr_edge.get_hashable_type()] = curr_edge.weight
+            if to_index in self._agents_nodes and from_index in self._agents_nodes and curr_edge.get_hashable_type() in self._agents_nodes[to_index].incoming_edges and curr_edge.get_hashable_type() in self._agents_nodes[from_index].outgoing_edges:
+                self._agents_nodes[to_index].incoming_edges[curr_edge.get_hashable_type()] = curr_edge.weight
+                self._agents_nodes[from_index].outgoing_edges[curr_edge.get_hashable_type()] = curr_edge.weight
 
     def build_graph(self, perspectives):
         """

@@ -219,7 +219,7 @@ class TownsFolkStrategy(object):
 
 
         game_graph = self._group_finder.find_groups(self._perspectives, day)
-        self._player_perspective.update_relationships(game_graph)
+        #self._player_perspective.update_relationships(game_graph)
 
         # If there is new data, check if new tasks can be created.
         if len(diff_data.index) > 0:
