@@ -81,7 +81,7 @@ class WolfStrategy(TownsFolkStrategy):
         # Initialize the singleton sentences dissector.
         SentenceDissector(my_index) #TODO: check!
 
-        PlayerEvaluation(agent_indices, self._index)#TODO: scores?
+        PlayerEvaluation(agent_indices, self._index, self._wolves)#TODO: scores?
 
         RoleEstimations(self._agent_indices, self._index)
 
@@ -103,7 +103,7 @@ class WolfStrategy(TownsFolkStrategy):
         self._night_task_manager = TaskManager()
         self._task_manager = TaskManager()
 
-        self._vote_model = wolfVoteModel(self._perspectives, my_index)
+        self._vote_model = wolfVoteModel(self._perspectives, self._wolves, my_index)
         self._special_roles = {}
         self._werewolf_accused_counter = 0
         self._enemies = {i: 0 for i in self._humans}
@@ -219,7 +219,7 @@ class WolfStrategy(TownsFolkStrategy):
 
         # At the end of the day reset the scores accumulated by the vote model.
         if request == "DAILY_FINISH":
-            self._vote_model.clear_scores() #TODO: ????
+            # self._vote_model.clear_scores() #TODO: ????
             self._done_in_day = False
 
         elif request == "VOTE":
