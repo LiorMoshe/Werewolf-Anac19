@@ -1,12 +1,8 @@
 from agents.informed.informed import Informed
-from agents.strategies.agent_strategy import TownsFolkStrategy
-#from agents.information_processing.agent_strategy import WolfStrategy
 from agents.strategies.WolfStrategy import WolfStrategy
-from agents.strategies.WolfStrategy import TeamStrategy
-import numpy as np
 
 
-class Werewolf(Informed):  #TODO - how to anderstend and evluate the masseges
+class Werewolf(Informed):
 
     def __init__(self):
         self.next_attack = None
@@ -17,7 +13,6 @@ class Werewolf(Informed):  #TODO - how to anderstend and evluate the masseges
                             if i != self._base_info._agentIndex],
                             self._base_info._agentIndex,
                             self._base_info._role_map, self._player_perspective)
-        #self._teem = TeamStrategy(1,2,3)
 
     def getName(self):
         return "Werewolf"
@@ -26,35 +21,13 @@ class Werewolf(Informed):  #TODO - how to anderstend and evluate the masseges
         return self._strategy.generate_talk()
 
     def whisper(self):
-        return ""
-        # pass
-        # if len(self._base_info._role_map) <= 1:
-        #     pass
-        # if self._base_info._day == 0:
-        #     pass#self._teem.dayone()
-
-        #my attack shoud happen once affter voting in day
-
-        # if len(self.react) > 0:
-        #     return self.anser()
-        # elif len(self.conflict) > 0:
-        #     return self.resolve_conflict()
-        # elif self.next_attack == None:
-        #     get_best_agent_for_me_or_team = 1  #TODO - REQUEST ANY (IDENTIFIED Agent1 [species])” or if at risk
-        #     reason="I dont know"
-        #     return f"BECAUSE ({reason}) (ATTACK Agent{get_best_agent_for_me_or_team})"  #because ()() anter args
-        # else:
-        #     return "OVER"
-        #tree or pass or new task?
-        return #f"AND (REQUEST ANY (COMINGOUT Agent{} [{}])(REQUEST ANY (COMINGOUT Agent{} [{}])"
+        return self._strategy.whisper()
 
     def vote(self):
         return self._strategy.vote()
 
     def attack(self):
-        #attack_chosen = np.random.choice([my_attack, team_attack,spichel_attack], p=[my_risk, team_risk,random_risk])
-        #return str(attack_chosen)
-        return "1"
+        return self._strategy.get_next_attck()
 
     def divine(self):
         pass
@@ -65,11 +38,3 @@ class Werewolf(Informed):  #TODO - how to anderstend and evluate the masseges
     def extract_state_info(self, base_info, diff_data, request):
         self._strategy.digest_sentences(diff_data)
 
-    def get_bff(self):
-        vote_for = self.get_best_vote_opt()
-
-        score = 1  # get_risk(vote_for)
-        vote_for_bff = np.max((s, coop) for s, coop in
-                              self._strategy._perspectives[vote_for].get_closest_cooperators(self._base_info._day) if
-                              coop not in self._base_info._role_map)[1]
-        vote_avrg_max_evel = 1  # get_avrg_obsical()

@@ -6,6 +6,7 @@ from agents.information_processing.graph_utils.visualization import visualize
 from agents.states.base_state import BaseState
 from agents.information_processing.dissection.sentence_dissector import SentenceDissector
 from agents.states.day_one import DayOne
+from agents.states.night_one import Night_one
 from agents.information_processing.lie_detector import LieDetector
 from agents.tasks.task_manager import TaskManager
 from agents.vote.wolf_vote_model import wolfVoteModel
@@ -15,6 +16,7 @@ from agents.strategies.role_estimations import RoleEstimations
 from agents.tasks.vote_task import VoteTask
 import numpy as np
 from agents.strategies.agent_strategy import TownsFolkStrategy
+from agents.game_roles import GameRoles
 
 
 # These sentences currently, don't help us much (maybe will be used in future dev).
@@ -57,15 +59,15 @@ class WolfStrategy(TownsFolkStrategy):
         if len(agent_indices) > 5:
             self._teammates_strategy = TeamStrategy([i for i in role_map.keys()],my_index) #pass task menge
             # self._agent_state = whisperOne(my_index, agent_indices)
-            self._agent_state = DayOne(my_index, agent_indices)
-        else:
-            self.fake_rol = np.random.choice(['SEER','VILLAGER'])
-            self._agent_state = DayOne(my_index, agent_indices)
-
+            self._agent_night_state = Night_one(my_index, agent_indices)
+        #else:
+            #self.fake_rol = None#np.random.choice(['SEER','VILLAGER'])
+        self._agent_state = DayOne(my_index, agent_indices)
+        self.fake_rol = None
         self._message_parser = MessageParser()
         self._index = my_index
         self._agent_indices = agent_indices
-        self._day = 1 # 0
+        self._day = 0
         self._role = role_map[str(self._index)]
         self._player_perspective = player_perspective
 
@@ -89,7 +91,7 @@ class WolfStrategy(TownsFolkStrategy):
         for idx in self._agent_indices:
             self._perspectives[idx] = AgentPerspective(idx, my_index, len(agent_indices) + 1,
                                                        None if idx not in role_map.keys() else role_map[idx])
-        for idx in self._wolves:
+        for idx in self._agent_indices:
             self._teammates[idx] = AgentPerspective(idx, my_index, len(agent_indices) + 1,
                                                    None if idx not in role_map.keys() else role_map[idx])
         # for idx in role_map:
@@ -137,7 +139,7 @@ class WolfStrategy(TownsFolkStrategy):
             talk_number = TalkNumber(day, turn, idx)
             Logger.instance.write("Got sentence: " + str(agent_sentence) + " from agent " + str(curr_index) + '\n')
 
-            if curr_index in self._humans:
+            if curr_index in self._perspectives.keys():
                 if agent_sentence not in UNUSEFUL_SENTENCES:
                     Logger.instance.write("Got Sentence: " + agent_sentence + '\n')
                     parsed_sentence = self._message_parser.process_sentence(agent_sentence, curr_index, day,
@@ -150,6 +152,7 @@ class WolfStrategy(TownsFolkStrategy):
                     self._perspectives[curr_index].update_vote(parsed_sentence)
                 elif message_type == MessageType.EXECUTE:
                     self._perspectives[curr_index].update_status(AgentStatus.DEAD_TOWNSFOLK)
+                    self._teammates[curr_index].update_status(AgentStatus.DEAD_TOWNSFOLK)
                     self._vote_model.update_dead_agent(curr_index)
                     print("AGENT" + str(self._index) + " Player " + str(curr_index) + " died by villagers")
                     PlayerEvaluation.instance.player_died(curr_index)
@@ -157,62 +160,36 @@ class WolfStrategy(TownsFolkStrategy):
                         del self._enemies[curr_index]
                     if curr_index in self._accusing:
                         del self._accusing[curr_index]
-                    self._humans.remove(curr_index)
+                    if curr_index in self._humans:
+                        self._humans.remove(curr_index)
+                    elif curr_index in self._wolves:
+                        self._wolves.remove(curr_index)
                 elif message_type == MessageType.DEAD:
                     self._perspectives[curr_index].update_status(AgentStatus.DEAD_WEREWOLVES)
+                    self._teammates[curr_index].update_status(AgentStatus.DEAD_WEREWOLVES)
                     self._vote_model.update_dead_agent(curr_index)
                     self.update_votes_after_death(curr_index)
                     if curr_index in self._enemies:
                         del self._enemies[curr_index]
                     if curr_index in self._accusing:
                         del self._accusing[curr_index]
-                    self._humans.remove(curr_index)
+                    if curr_index in self._humans:
+                        self._humans.remove(curr_index)
+                    elif curr_index in self._wolves:
+                        self._wolves.remove(curr_index)
 
                 elif message_type == MessageType.ATTACK_VOTE:#TODO
-                    print("Got attack vote when I am in townsfolk, BUG.")
-                elif message_type == MessageType.WHISPER:#TODO
-                    print("Got whisper when I am in townsfolk, BUG.")
+                    self._teammates[curr_index].update_vote(parsed_sentence)
+                elif message_type == MessageType.WHISPER:
+                    if agent_sentence not in UNUSEFUL_SENTENCES:
+                        self._teammates[curr_index].update_perspective(parsed_sentence, talk_number, day,save_sen=False)
+                        self.generate_talk()#TODO
+                        #todo-if 2 same roll swich
                 elif message_type == MessageType.FINISH:
                     self._perspectives[curr_index].update_real_role(parsed_sentence.role)
                     #self._group_finder.set_player_role(curr_index, parsed_sentence.role)
 
                 self._perspectives[curr_index].switch_sides(day)
-
-
-            elif curr_index in self._wolves and curr_index != self._index:
-                if agent_sentence not in UNUSEFUL_SENTENCES:
-                    Logger.instance.write("Got Sentence: " + agent_sentence + '\n')
-                    parsed_sentence = self._message_parser.process_sentence(agent_sentence, curr_index, day,
-                                                                            talk_number)
-                if message_type == MessageType.TALK:
-                    if agent_sentence not in UNUSEFUL_SENTENCES:
-                        self._teammates[curr_index].update_perspective(parsed_sentence, talk_number, day)
-                elif message_type == MessageType.VOTE:
-                    self._teammates[curr_index].update_vote(parsed_sentence)
-                elif message_type == MessageType.EXECUTE:
-                    self._teammates[curr_index].update_status(AgentStatus.DEAD_TOWNSFOLK)
-                    self._vote_model.update_dead_agent(curr_index)
-                    print("AGENT" + str(self._index) + " Player " + str(curr_index) + " died by villagers")
-                    PlayerEvaluation.instance.player_died(curr_index)
-                    self._wolves.remove(curr_index)
-                elif message_type == MessageType.DEAD:
-                    self._teammates[curr_index].update_status(AgentStatus.DEAD_WEREWOLVES)
-                    self._vote_model.update_dead_agent(curr_index)
-                    self.update_votes_after_death(curr_index)
-                    self._wolves.remove(curr_index)
-
-
-                elif message_type == MessageType.ATTACK_VOTE: #TODO
-                    print("Got attack vote when I am in townsfolk, BUG.")
-                elif message_type == MessageType.WHISPER: #TODO
-                    print("Got whisper when I am in townsfolk, BUG.")
-                elif message_type == MessageType.FINISH:
-                    self._perspectives[curr_index].update_real_role(parsed_sentence.role)
-                    self._group_finder.set_player_role(curr_index, parsed_sentence.role)#TODO
-
-                self._perspectives[curr_index].switch_sides(day)
-
-
             else:
                 # This is my index, save my own sentences if we need to reflect them in the future.
                 self._message_parser.add_my_sentence(self._index, agent_sentence, day, talk_number)
@@ -220,7 +197,6 @@ class WolfStrategy(TownsFolkStrategy):
 
         game_graph = self._group_finder.find_groups(self._perspectives, day) #TODO
         # If there is new data, check if new tasks can be created.
-        #*********************************
         if len(diff_data.index) > 0:
             self.handle_estimations(game_graph)
             tasks = self.generate_tasks(game_graph, day)
@@ -251,7 +227,6 @@ class WolfStrategy(TownsFolkStrategy):
             updated_scores = game_graph.get_players_voting_scores()
             for agent_idx, score in updated_scores.items():
                 self._vote_model.update_vote(agent_idx, score)
-        #*********************************************************
 
 
     def generate_talk(self):
@@ -316,6 +291,49 @@ class WolfStrategy(TownsFolkStrategy):
                                                                                               substr=substr)
                         self._vote_model.set_to_max_score(talking_agent_idx)
 
+    def get_next_attck(self):
+        return "1"
+        self._day += 1
+        # attack_chosen = np.random.choice([my_attack, team_attack,spichel_attack], p=[my_risk, team_risk,random_risk])
+        team_attack,team_risk = self._teammates_strategy.get_best_attak_for_team()
+        my_attack = self.vote()#todo - get score and risk from day talk
+        my_risk = 0.1
+        spichel_attack = np.random.choice(self._humans)
+        random_risk = 0.2
+        return np.random.choice([my_attack, team_attack,spichel_attack], p=[my_risk, team_risk,random_risk])
+    #
+    # def get_bff(self):
+    #     vote_for = self.get_best_vote_opt()
+    #
+    #     score = 1  # get_risk(vote_for)
+    #     vote_for_bff = np.max((s, coop) for s, coop in
+    #                           self._strategy._perspectives[vote_for].get_closest_cooperators(self._base_info._day) if
+    #                           coop not in self._base_info._role_map)[1]
+    #     vote_avrg_max_evel = 1  # get_avrg_obsical()
+
+    def whisper(self):
+        """
+        :return:
+        """
+        if self.fake_rol == None:
+            print('************************')
+            self.fake_rol = np.random.choice(['SEER','VILLAGER'])
+            return "COMINGOUT Agent[{me}] {rol}".\
+                    format(rol=self.fake_rol,me=str(self._index))
+        #TODO - add task who to kill
+        sentence = self._agent_night_state.talk(self._night_task_manager)
+        Logger.instance.write("I Said: " + sentence)
+        return sentence
+
+    def update_night_state(self):
+        """
+        Update the state of the agent throughout the game, this will help us choose which tasks to do
+        at given moments.
+        :return:
+        """
+        if self._day > 0 and self._agent_night_state.get_type() == StateType.NIGHT_ONE:
+            Logger.instance.write("Updated night state to Base State from Day One State")
+            self._agent_night_state = BaseState(self._index, self._agent_indices)
 
 
 from enum import Enum
@@ -352,35 +370,8 @@ class TeamStrategy(object):
         self.react = []
         self.next_attack = None
 
-    def dayone(self):
-        if self._base_info._wisper[str(self.my_agent)]==1:
-            humans = random.choice(self._noncooperators,2,replace=False)
-            return "INQUIRE ANY (DAY 1(AGREE ANY))"
-            # return "AND (INQUIRE Agent{self.team[0]} (DAY 1(AGREE Agent{humans[0]}))(INQUIRE Agent{self.team[1]} (DAY 1(AGREE Agent{humans[1]})))"
-        elif len(self.conflict) > 0:
-            return self.resolve_conflict()
-        elif len(self.react) > 0:
-            return self.anser()
-        elif not (self._assind_roles):
-            return "INQUIRE ANY (ESTIMATE ANY ANY)"  # ask players to assign rolls
-        else:
-            return "OVER"
-
-    def resolve_conflict(self):
-        prob = self.conflict.pop()
-        choosen = self.check_option(prob[0],prob[1])
-        return "BECAUSE (AND({p})({p2})) (AND({p})(NOT({p2})))".\
-            format(p=prob[choosen], p2=prob[1-choosen])
-
-    def anser(self):
-        anser = "AND"
-        for event in self.react:
-            anser += "({event})".format(event=event)
-        return anser
-
-    def check_option(self,option1,option2):
-        return 0
-
+    def update_best_attak_for_team(self):
+        return ""
     def get_best_attak_for_team(self):
         for w in self.team:
             w.under_risk_level
