@@ -1,5 +1,4 @@
 from aiwolfpy.tcpipclient_parsed import connect_parse
-import messages_manager
 from agents.agent_container import AgentContainer
 from agents.logger import Logger
 
@@ -26,7 +25,6 @@ class Werewolf(object):
         such as number of players, how many times an agent can talk per day, etc.
         :return: None
         """
-        self.msg_manager = messages_manager(base_info["agentIdx"], game_setting["playerNum"])
         print("Initialized")
 
     def dayStart(self):

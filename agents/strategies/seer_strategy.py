@@ -38,7 +38,7 @@ class SeerStrategy(TownsFolkStrategy):
     PROB_OF_COMINGOUT = 0.6
 
     def __init__(self, agent_indices, my_index, role_map, statusMap, player_perspective):
-        super().__init__(agent_indices, my_index, role_map)
+        super().__init__(agent_indices, my_index, role_map, player_perspective)
 
         self.my_index = my_index
         self._divined_agents = {}
