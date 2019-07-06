@@ -170,9 +170,11 @@ class TownsFolkStrategy(object):
                         player_perspective_msg_types = [SentenceType.COMINGOUT, SentenceType.AGREE, SentenceType.ESTIMATE, SentenceType.VOTE]
                         if parsed_sentence.type in player_perspective_msg_types or\
                             (parsed_sentence.type in [SentenceType.REQUEST, SentenceType.INQUIRE] and parsed_sentence.content.type in player_perspective_msg_types):
-                            #print("UPDATE BY MSG TYPE\n",parsed_sentence.target, parsed_sentence.type)
-                            self._player_perspective.msg_event(parsed_sentence, talk_number, self._perspectives[int(
-                                parsed_sentence.target)].get_non_coop_count())
+                            if parsed_sentence.target not in self._perspectives:
+                                non_coop = 0
+                            else:
+                                non_coop = self._perspectives[int(parsed_sentence.target)].get_non_coop_count()
+                            self._player_perspective.msg_event(parsed_sentence, talk_number, non_coop)
                         elif "COMINGOUT" in agent_sentence or "ESTIMATE" in agent_sentence or "VOTE" in agent_sentence:
                             for sentence in parsed_sentence.sentences:
                                 if sentence.type in player_perspective_msg_types:
