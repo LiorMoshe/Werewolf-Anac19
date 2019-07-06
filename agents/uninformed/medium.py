@@ -1,5 +1,5 @@
 from agents.uninformed.villager import Villager
-from agents.strategies.agent_strategy import TownsFolkStrategy
+from agents.strategies.medium_straregy import MediumStrategy
 
 # gets the identity of the voted player each day
 
