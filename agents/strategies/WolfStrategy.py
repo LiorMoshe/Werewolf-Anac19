@@ -243,7 +243,7 @@ class WolfStrategy(TownsFolkStrategy):
 
         # At the end of the day reset the scores accumulated by the vote model.
         if request == "DAILY_FINISH":
-            self._vote_model.clear_scores() #TODO: ????
+            # self._vote_model.clear_scores() #TODO: ????
             self._done_in_day = False
 
         elif request == "VOTE":
