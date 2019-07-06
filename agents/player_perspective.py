@@ -117,7 +117,7 @@ class PlayerPerspective(object):
             target = msg.target
         elif 'talk_number' in fields:
             target = self.talk_num_2_target[msg['talk_number']]
-        if target is None:
+        if target is None or target == 'ANY':
             return
         role = msg.role if 'role' in fields else None
         if target == self.my_index:

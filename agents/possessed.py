@@ -15,3 +15,6 @@ class Possessed(Villager):
 
     def getName(self):
         return "Possessed"
+
+    def vote(self):
+        return self._strategy.vote()
