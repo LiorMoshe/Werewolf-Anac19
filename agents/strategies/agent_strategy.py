@@ -2,7 +2,6 @@ from agents.information_processing.agent_perspective import *
 from agents.information_processing.message_parsing import *
 from agents.information_processing.sentences_container import SentencesContainer
 from agents.information_processing.graph_utils.group_finder import  GroupFinder
-from agents.information_processing.graph_utils.visualization import visualize
 from agents.states.base_state import BaseState
 from agents.information_processing.dissection.sentence_dissector import SentenceDissector
 from agents.states.day_one import DayOne
@@ -41,8 +40,9 @@ class MessageType(Enum):
     ATTACK = 6,
     WHISPER = 7,
     FINISH = 8,
-    DIVINE = 9
-
+    DIVINE = 9,
+    IDENTIFY = 10,
+    GUARD = 11
 
 class TownsFolkStrategy(object):
     """
@@ -51,13 +51,14 @@ class TownsFolkStrategy(object):
     inspects moves of werewolves teammates through the night and day.
     """
 
-    def __init__(self, agent_indices, my_index, role_map):
+    def __init__(self, agent_indices, my_index, role_map, player_perspective):
         self._perspectives = {}
         self._message_parser = MessageParser()
         self._index = my_index
         self._agent_indices = agent_indices
         self._day = 1
         self._role = role_map[str(self._index)]
+        self._player_perspective = player_perspective
 
         # Used for tasks that can be done only once per day.
         self._done_in_day = False
@@ -150,13 +151,13 @@ class TownsFolkStrategy(object):
             talk_number = TalkNumber(day, turn, idx)
             Logger.instance.write("Got sentence: " + str(agent_sentence) + " from agent " + str(curr_index)  + '\n')
 
-            # only seer and medium players will see
-            # if message_type == MessageType.DIVINE:
-            #     print("DIVINE MESSAGE RECEIVED")
-            #     parsed_sentence = self._message_parser.process_sentence(agent_sentence, curr_index, day,
-            #                                                            talk_number)
-            #     # store divined results
-            #     self.update_divine_result(parsed_sentence.target, parsed_sentence.species)
+            #only seer and medium players will see
+            if message_type == MessageType.DIVINE or message_type == MessageType.IDENTIFY:
+                print("DIVINE MESSAGE RECEIVED")
+                parsed_sentence = self._message_parser.process_sentence(agent_sentence, curr_index, day,
+                                                                        talk_number)
+                # store divined results
+                self.update_divine_result(parsed_sentence.target, parsed_sentence.species)
 
             if curr_index in self._perspectives.keys():
                 if agent_sentence not in UNUSEFUL_SENTENCES:
@@ -166,9 +167,34 @@ class TownsFolkStrategy(object):
                 if message_type == MessageType.TALK:
                     if agent_sentence not in UNUSEFUL_SENTENCES:
                         self._perspectives[curr_index].update_perspective(parsed_sentence, talk_number, day)
+                        player_perspective_msg_types = [SentenceType.COMINGOUT, SentenceType.AGREE, SentenceType.ESTIMATE, SentenceType.VOTE]
+                        if parsed_sentence.type in player_perspective_msg_types or\
+                            (parsed_sentence.type in [SentenceType.REQUEST, SentenceType.INQUIRE] and parsed_sentence.content.type in player_perspective_msg_types):
+                            if parsed_sentence.target not in self._perspectives:
+                                non_coop = 0
+                            else:
+                                non_coop = self._perspectives[int(parsed_sentence.target)].get_non_coop_count()
+                            self._player_perspective.msg_event(parsed_sentence, talk_number, non_coop)
+                        elif "COMINGOUT" in agent_sentence or "ESTIMATE" in agent_sentence or "VOTE" in agent_sentence:
+                            for sentence in parsed_sentence.sentences:
+                                if sentence.type in player_perspective_msg_types:
+                                    if sentence.target not in self._perspectives:
+                                        non_coop = 0
+                                    else:
+                                        non_coop = self._perspectives[int(sentence.target)].get_non_coop_count()
+                                    self._player_perspective.msg_event(sentence, talk_number, non_coop)
+                                    break
+
                 elif message_type == MessageType.VOTE:
                     self._perspectives[curr_index].update_vote(parsed_sentence)
+                    if parsed_sentence.target not in self._perspectives:
+                        non_coop = 0
+                    else:
+                        non_coop = self._perspectives[int(parsed_sentence.target)].get_non_coop_count()
+                    self._player_perspective.msg_event(parsed_sentence, talk_number, non_coop)
                 elif message_type == MessageType.EXECUTE:
+                    if curr_index == self._index:
+                        self._player_perspective.update_my_status(AgentStatus.DEAD_TOWNSFOLK)
                     self._perspectives[curr_index].update_status(AgentStatus.DEAD_TOWNSFOLK)
                     self._vote_model.update_dead_agent(curr_index)
                     print("AGENT" + str(self._index) + " Player " + str(curr_index) + " died by villagers")
@@ -193,6 +219,8 @@ class TownsFolkStrategy(object):
 
 
         game_graph = self._group_finder.find_groups(self._perspectives, day)
+        #self._player_perspective.update_relationships(game_graph)
+
         # If there is new data, check if new tasks can be created.
         if len(diff_data.index) > 0:
             self.handle_estimations(game_graph)
@@ -339,79 +367,3 @@ class TownsFolkStrategy(object):
         result = self._vote_model.get_vote()
         Logger.instance.write("Voted for Agent" + str(result))
         return result
-
-
-
-class SeerStrategy(TownsFolkStrategy):
-
-    def __init__(self, agent_indices, my_index, role_map, statusMap, player_perspective):
-        super().__init__(agent_indices, my_index, role_map)
-
-        self.my_index = my_index
-        self._divined_agents = {}
-
-        self.is_first_day = True
-
-        # create prospect map {agent Idx -> suspicious score}
-        self._divine_prospects = {}
-        my_index_str = str(my_index)
-        for agent in statusMap.keys():
-            if (agent != my_index_str):
-                self._divine_prospects[agent] = 0
-
-    def update_divine_result(self, agent, species):
-        # no longer a prospect
-        try:
-            del self._divine_prospects[str(agent)]
-            print("PROSPECTS")
-            print(self._divine_prospects)
-        except Exception as e:
-            print("ERRRORRRRR {}".format(e))
-
-        self._divined_agents[str(agent)] = species
-        self.print_divined_agents()
-
-    def print_divined_agents(self):
-        print("DIVINED LIST:")
-        print(self._divined_agents)
-
-    def get_next_divine(self):
-        # if first day no prior knowledge -> random divine
-        if self.is_first_day:
-            ls = list(self._divine_prospects.keys())
-            idx = np.random.randint(0, len(ls))
-
-            return ls[idx]
-
-        # use prior knowledge to update prospect list
-        for agent in self._divine_prospects:
-            score = 0
-            agent_idx = int(agent)
-            if self._perspectives[agent_idx]._status == AgentStatus.DEAD_WEREWOLVES:
-                # If was attacked then definitly NOT a werewolf (if possessed then seer can't know anyhow)
-                if agent not in self._divined_agents:
-                    self.update_divine_result(agent, 'HUMAN')
-
-        # decide
-        agent_to_divine = max(self._divine_prospects.keys(), key=(lambda key: self._divine_prospects[key]))
-
-        return str(agent_to_divine)
-
-    def talk(self):
-        pass
-
-
-'''
-for each agent in prospects:
-    look at perspective :
-        agent status:
-            if dead then remove from prospects.
-        
-        liar score 0.3
-        admitted role 0.2
-        likely role 0.25
-        check if a known werewolf in cooperators 0.4
-
-        each day:
-            0.4 * prev score + 0.6 * current score 
-'''

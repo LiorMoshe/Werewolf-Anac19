@@ -64,6 +64,9 @@ class AgentPerspective(object):
         #closest_cooperator = cooperators_fondness[np.argmax(cooperators_fondness)][1]
         return cooperators_fondness#self._cooperators[closest_cooperator]
 
+    def get_non_coop_count(self):
+        return len(self._noncooperators)
+
     def update_status(self, status):
         self._status = status
 
@@ -153,7 +156,7 @@ class AgentPerspective(object):
         """
 
         Logger.instance.write("Dissecting Message: " + str(message.original_message))
-        print("Dissecting Message: " + str(message.original_message))
+        #print("Dissecting Message: " + str(message.original_message))
 
         result = SentenceDissector.instance.dissect_sentence(message, talk_number, day)
 

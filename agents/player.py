@@ -199,7 +199,7 @@ class Player(ABC):
         # self._strategy = TownsFolkStrategy(agents_idx,
         #                                    self._base_info._agentIndex,
         #                                    self._base_info._role_map)
-        self._player_perspective = PlayerPerspective(agents_idx)
+        self._player_perspective = PlayerPerspective(self.player_id, agents_idx)
         # allow each player to choose its strategy when invoked
         self.init_strategy(base_info, diff_data, game_setting)
 
@@ -298,3 +298,8 @@ class Player(ABC):
 
     def get_task(self, id):
         return self._tasks[id]
+
+    def get_vote_score(self, agent_id):
+        if agent_id not in self._strategy._vote_model._vote_scores.keys():
+            return -np.inf
+        return self._strategy._vote_model._vote_scores[agent_id]
