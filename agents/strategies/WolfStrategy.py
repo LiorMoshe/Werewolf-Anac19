@@ -59,7 +59,7 @@ class WolfStrategy(TownsFolkStrategy):
             # self._agent_state = whisperOne(my_index, agent_indices)
             self._agent_state = DayOne(my_index, agent_indices)
         else:
-            self.fake_rol = np.random.choice(['SEER','VILLAGER'])
+            self.fake_rol = np.random.choice(['SEER', 'VILLAGER'])
             self._agent_state = DayOne(my_index, agent_indices)
 
         self._message_parser = MessageParser()
@@ -79,7 +79,7 @@ class WolfStrategy(TownsFolkStrategy):
         # Initialize the singleton sentences dissector.
         SentenceDissector(my_index) #TODO: check!
 
-        PlayerEvaluation(agent_indices, self._index)#TODO: scores?
+        PlayerEvaluation(agent_indices, self._index, self._wolves)#TODO: scores?
 
         RoleEstimations(self._agent_indices, self._index)
 
@@ -101,7 +101,7 @@ class WolfStrategy(TownsFolkStrategy):
         self._night_task_manager = TaskManager()
         self._task_manager = TaskManager()
 
-        self._vote_model = wolfVoteModel(self._perspectives, my_index)
+        self._vote_model = wolfVoteModel(self._perspectives, self._wolves, my_index)
         self._special_roles = {}
         self._werewolf_accused_counter = 0
         self._enemies = {i: 0 for i in self._humans}

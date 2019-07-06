@@ -15,12 +15,14 @@ class wolfVoteModel(object):
     for him we will waste our vote and probably put us in danger for nothing.
     """
 
-    def __init__(self, agent_indices, my_idx):
+    def __init__(self, agent_indices, teammates_indices, my_idx):
         self.index = my_idx
-        self._vote_scores = {idx:0 for idx in agent_indices}
+        self._vote_scores = {idx: 0 for idx in agent_indices}
+        self._teammates_indices = teammates_indices
+        print("initialized the vote model to", self.index, self._vote_scores, self._teammates_indices)
 
     def update_vote(self, agent_idx, score):
-        if agent_idx != self.index:
+        if agent_idx != self.index and agent_idx not in self._teammates_indices:
             self._vote_scores[agent_idx] += score
 
     def clear_scores(self):
@@ -28,8 +30,9 @@ class wolfVoteModel(object):
             self._vote_scores[idx] = 0.0
 
     def set_to_max_score(self, agent_idx):
-        max_score = max(self._vote_scores.items(), key=itemgetter(1))[1]
-        self._vote_scores[agent_idx] = abs(max_score) * 2
+        if agent_idx not in self._teammates_indices:
+            max_score = max(self._vote_scores.items(), key=itemgetter(1))[1]
+            self._vote_scores[agent_idx] = abs(max_score) * 2
 
     def update_dead_agent(self, idx):
         if idx not in self._vote_scores.keys():
@@ -42,15 +45,16 @@ class wolfVoteModel(object):
         del self._vote_scores[idx]
 
     def get_vottable_agents(self):
-        return list(self._vote_scores.keys())
+        return [idx for idx in self._vote_scores.keys() if idx not in self._teammates_indices]
 
     def get_vote(self):
         Logger.instance.write("Current voting scores: " + str(self._vote_scores))
         max_idx, max_vote_score = max(self._vote_scores.items(), key=itemgetter(1))
-
+        print("voting scores are:", self._vote_scores)
         Logger.instance.write("Max vote score " + str(max_vote_score) + " for index: " + str(max_idx))
         if max_vote_score == 0:
             return random.choice(self.get_vottable_agents())
+        print("will vote to",max_idx)
         return max_idx
 
     def handle_vote_request(self, game_graph, requested_from, target):
