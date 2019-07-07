@@ -73,12 +73,13 @@ class SentenceType(Enum):
     GUARDED = 12,
     DIVINED = 13,
     VOTED = 14,
-    IDENTIFIED = 15
+    IDENTIFIED = 15,
     BECAUSE = 16,
     AND = 17,
     XOR = 18,
     NOT = 19,
-    OR = 20
+    OR = 20,
+    IDENTIFY = 21
 
 
 KNOWLEDGE = [SentenceType.ESTIMATE, SentenceType.COMINGOUT]

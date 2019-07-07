@@ -137,121 +137,125 @@ class TownsFolkStrategy(object):
         :param diff_data:
         :return:
         """
-        self._group_finder.clean_groups()
-        day = None
-        message_type = None
+        try:
+            self._group_finder.clean_groups()
+            day = None
+            message_type = None
 
-        for i in range(len(diff_data.index)):
-            curr_index = diff_data.loc[i, 'agent']
-            agent_sentence = diff_data.loc[i, 'text']
-            idx = diff_data.loc[i, 'idx']
-            turn = diff_data.loc[i, 'turn']
-            day = diff_data.loc[i, 'day']
-            message_type = MessageType[diff_data.loc[i, 'type'].upper()]
-            talk_number = TalkNumber(day, turn, idx)
-            Logger.instance.write("Got sentence: " + str(agent_sentence) + " from agent " + str(curr_index)  + '\n')
+            for i in range(len(diff_data.index)):
+                curr_index = diff_data.loc[i, 'agent']
+                agent_sentence = diff_data.loc[i, 'text']
+                idx = diff_data.loc[i, 'idx']
+                turn = diff_data.loc[i, 'turn']
+                day = diff_data.loc[i, 'day']
+                message_type = MessageType[diff_data.loc[i, 'type'].upper()]
+                talk_number = TalkNumber(day, turn, idx)
+                Logger.instance.write("Got sentence: " + str(agent_sentence) + " from agent " + str(curr_index)  + '\n')
 
-            #only seer and medium players will see
-            if message_type == MessageType.DIVINE or message_type == MessageType.IDENTIFY:
-                print("DIVINE MESSAGE RECEIVED")
-                parsed_sentence = self._message_parser.process_sentence(agent_sentence, curr_index, day,
-                                                                        talk_number)
-                # store divined results
-                self.update_divine_result(parsed_sentence.target, parsed_sentence.species)
-
-            if curr_index in self._perspectives.keys():
-                if agent_sentence not in UNUSEFUL_SENTENCES:
-                    Logger.instance.write("Got Sentence: " + agent_sentence + '\n')
+                #only seer and medium players will see
+                if message_type == MessageType.DIVINE or message_type == MessageType.IDENTIFY:
+                    print("DIVINE MESSAGE RECEIVED")
                     parsed_sentence = self._message_parser.process_sentence(agent_sentence, curr_index, day,
                                                                             talk_number)
-                if message_type == MessageType.TALK:
+                    # store divined results
+                    self.update_divine_result(parsed_sentence.target, parsed_sentence.species)
+
+                if curr_index in self._perspectives.keys():
                     if agent_sentence not in UNUSEFUL_SENTENCES:
-                        self._perspectives[curr_index].update_perspective(parsed_sentence, talk_number, day)
-                        player_perspective_msg_types = [SentenceType.COMINGOUT, SentenceType.AGREE, SentenceType.ESTIMATE, SentenceType.VOTE]
-                        if parsed_sentence.type in player_perspective_msg_types or\
-                            (parsed_sentence.type in [SentenceType.REQUEST, SentenceType.INQUIRE] and parsed_sentence.content.type in player_perspective_msg_types):
-                            if parsed_sentence.target not in self._perspectives:
-                                non_coop = 0
-                            else:
-                                non_coop = self._perspectives[int(parsed_sentence.target)].get_non_coop_count()
-                            self._player_perspective.msg_event(parsed_sentence, talk_number, non_coop)
-                        elif "COMINGOUT" in agent_sentence or "ESTIMATE" in agent_sentence or "VOTE" in agent_sentence:
-                            for sentence in parsed_sentence.sentences:
-                                if sentence.type in player_perspective_msg_types:
-                                    if sentence.target not in self._perspectives:
-                                        non_coop = 0
-                                    else:
-                                        non_coop = self._perspectives[int(sentence.target)].get_non_coop_count()
-                                    self._player_perspective.msg_event(sentence, talk_number, non_coop)
-                                    break
+                        Logger.instance.write("Got Sentence: " + agent_sentence + '\n')
+                        parsed_sentence = self._message_parser.process_sentence(agent_sentence, curr_index, day,
+                                                                                talk_number)
+                    if message_type == MessageType.TALK:
+                        if agent_sentence not in UNUSEFUL_SENTENCES:
+                            self._perspectives[curr_index].update_perspective(parsed_sentence, talk_number, day)
+                            player_perspective_msg_types = [SentenceType.COMINGOUT, SentenceType.AGREE, SentenceType.ESTIMATE, SentenceType.VOTE]
+                            if parsed_sentence.type in player_perspective_msg_types or\
+                                (parsed_sentence.type in [SentenceType.REQUEST, SentenceType.INQUIRE] and parsed_sentence.content.type in player_perspective_msg_types):
+                                if parsed_sentence.target not in self._perspectives:
+                                    non_coop = 0
+                                else:
+                                    non_coop = self._perspectives[int(parsed_sentence.target)].get_non_coop_count()
+                                self._player_perspective.msg_event(parsed_sentence, talk_number, non_coop)
+                            elif "COMINGOUT" in agent_sentence or "ESTIMATE" in agent_sentence or "VOTE" in agent_sentence:
+                                for sentence in parsed_sentence.sentences:
+                                    if sentence.type in player_perspective_msg_types:
+                                        if sentence.target not in self._perspectives:
+                                            non_coop = 0
+                                        else:
+                                            non_coop = self._perspectives[int(sentence.target)].get_non_coop_count()
+                                        self._player_perspective.msg_event(sentence, talk_number, non_coop)
+                                        break
 
-                elif message_type == MessageType.VOTE:
-                    self._perspectives[curr_index].update_vote(parsed_sentence)
-                    if parsed_sentence.target not in self._perspectives:
-                        non_coop = 0
-                    else:
-                        non_coop = self._perspectives[int(parsed_sentence.target)].get_non_coop_count()
-                    self._player_perspective.msg_event(parsed_sentence, talk_number, non_coop)
-                elif message_type == MessageType.EXECUTE:
-                    if curr_index == self._index:
-                        self._player_perspective.update_my_status(AgentStatus.DEAD_TOWNSFOLK)
-                    self._perspectives[curr_index].update_status(AgentStatus.DEAD_TOWNSFOLK)
-                    self._vote_model.update_dead_agent(curr_index)
-                    print("AGENT" + str(self._index) + " Player " + str(curr_index) + " died by villagers")
-                    PlayerEvaluation.instance.player_died(curr_index)
-                elif message_type == MessageType.DEAD:
-                    self._perspectives[curr_index].update_status(AgentStatus.DEAD_WEREWOLVES)
-                    self._vote_model.update_dead_agent(curr_index)
-                    self.update_votes_after_death(curr_index)
+                    elif message_type == MessageType.VOTE:
+                        self._perspectives[curr_index].update_vote(parsed_sentence)
+                        if parsed_sentence.target not in self._perspectives:
+                            non_coop = 0
+                        else:
+                            non_coop = self._perspectives[int(parsed_sentence.target)].get_non_coop_count()
+                        self._player_perspective.msg_event(parsed_sentence, talk_number, non_coop)
+                    elif message_type == MessageType.EXECUTE:
+                        if curr_index == self._index:
+                            self._player_perspective.update_my_status(AgentStatus.DEAD_TOWNSFOLK)
+                        self._perspectives[curr_index].update_status(AgentStatus.DEAD_TOWNSFOLK)
+                        self._vote_model.update_dead_agent(curr_index)
+                        print("AGENT" + str(self._index) + " Player " + str(curr_index) + " died by villagers")
+                        PlayerEvaluation.instance.player_died(curr_index)
+                    elif message_type == MessageType.DEAD:
+                        self._perspectives[curr_index].update_status(AgentStatus.DEAD_WEREWOLVES)
+                        self._vote_model.update_dead_agent(curr_index)
+                        self.update_votes_after_death(curr_index)
 
-                elif message_type == MessageType.ATTACK_VOTE:
-                    print("Got attack vote when I am in townsfolk, BUG.")
-                elif message_type == MessageType.WHISPER:
-                    print("Got whisper when I am in townsfolk, BUG.")
-                elif message_type == MessageType.FINISH:
-                    self._perspectives[curr_index].update_real_role(parsed_sentence.role)
-                    self._group_finder.set_player_role(curr_index, parsed_sentence.role)
+                    elif message_type == MessageType.ATTACK_VOTE:
+                        print("Got attack vote when I am in townsfolk, BUG.")
+                    elif message_type == MessageType.WHISPER:
+                        print("Got whisper when I am in townsfolk, BUG.")
+                    elif message_type == MessageType.FINISH:
+                        self._perspectives[curr_index].update_real_role(parsed_sentence.role)
+                        self._group_finder.set_player_role(curr_index, parsed_sentence.role)
 
-                self._perspectives[curr_index].switch_sides(day)
-            else:
-                # This is my index, save my own sentences if we need to reflect them in the future.
-                self._message_parser.add_my_sentence(self._index, agent_sentence, day, talk_number)
-
-
-        game_graph = self._group_finder.find_groups(self._perspectives, day)
-        #self._player_perspective.update_relationships(game_graph)
-
-        # If there is new data, check if new tasks can be created.
-        if len(diff_data.index) > 0:
-            self.handle_estimations(game_graph)
-            tasks = self.generate_tasks(game_graph, day)
-            self._task_manager.add_tasks(tasks)
-            self._task_manager.update_tasks_importance(day)
-
-            # Make sure we update the day of the game, used for discounting.
-            self._day = day
+                    self._perspectives[curr_index].switch_sides(day)
+                else:
+                    # This is my index, save my own sentences if we need to reflect them in the future.
+                    self._message_parser.add_my_sentence(self._index, agent_sentence, day, talk_number)
 
 
-        self.update_state()
-        self.update_roles()
+            game_graph = self._group_finder.find_groups(self._perspectives, day)
+            #self._player_perspective.update_relationships(game_graph)
 
-        # Note: In case you try running several games together you cant use the visualization.
-        if message_type == MessageType.FINISH:
-            # visualize(game_graph)
-            SentencesContainer.instance.clean()
-            PlayerEvaluation.instance.reset(self._agent_indices, self._index)
-            RoleEstimations.instance.reset(self._agent_indices, self._index)
+            # If there is new data, check if new tasks can be created.
+            if len(diff_data.index) > 0:
+                self.handle_estimations(game_graph)
+                tasks = self.generate_tasks(game_graph, day)
+                self._task_manager.add_tasks(tasks)
+                self._task_manager.update_tasks_importance(day)
 
-        # At the end of the day reset the scores accumulated by the vote model.
-        if request == "DAILY_FINISH":
-            self._vote_model.clear_scores()
-            self._done_in_day = False
+                # Make sure we update the day of the game, used for discounting.
+                self._day = day
 
-        elif request == "VOTE":
-            PlayerEvaluation.instance.log()
-            updated_scores = game_graph.get_players_voting_scores()
-            for agent_idx, score in updated_scores.items():
-                self._vote_model.update_vote(agent_idx, score)
+
+            self.update_state()
+            self.update_roles()
+
+            # Note: In case you try running several games together you cant use the visualization.
+            if message_type == MessageType.FINISH:
+                # visualize(game_graph)
+                SentencesContainer.instance.clean()
+                PlayerEvaluation.instance.reset(self._agent_indices, self._index)
+                RoleEstimations.instance.reset(self._agent_indices, self._index)
+
+            # At the end of the day reset the scores accumulated by the vote model.
+            if request == "DAILY_FINISH":
+                self._vote_model.clear_scores()
+                self._done_in_day = False
+
+            elif request == "VOTE":
+                PlayerEvaluation.instance.log()
+                updated_scores = game_graph.get_players_voting_scores()
+                for agent_idx, score in updated_scores.items():
+                    self._vote_model.update_vote(agent_idx, score)
+        except Exception as e:
+            print("AGENT STRATEGY EXCEPTION IN UPDATE:")
+            print(e)
 
 
     def update_votes_after_death(self, idx):
