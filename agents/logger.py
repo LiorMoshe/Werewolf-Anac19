@@ -7,7 +7,8 @@ class Logger(object):
             self._index = None
 
         def write(self, message):
-            self._file.write("Agent[" + str(self._index) + "]: " + message + '\n')
+            temp = 1
+            #self._file.write("Agent[" + str(self._index) + "]: " + message + '\n')
 
         def close(self):
             self._file.close()
