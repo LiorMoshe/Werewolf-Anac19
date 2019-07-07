@@ -19,18 +19,28 @@ class SentencesContainer(object):
             Logger.instance.write("Len: " + str(len(self.talk_number_to_sentences)))
 
         def add_sentence(self, dissected_sentence):
-            key_val = str(dissected_sentence.talk_number)
-            Logger.instance.write(
-                "Adding sentence of TalkNumber: " + str(key_val) + " to the sentence container " + str(len(self.talk_number_to_sentences)))
-            if key_val not in self.talk_number_to_sentences.keys():
-                self.talk_number_to_sentences[key_val] = dissected_sentence
-            else:
-                raise Exception("Two sentences shouldn't be saved for the same talk number: " + key_val +
-                                "Message " + str(dissected_sentence.message) + " can't be saved because the message " +
-                                str(self.talk_number_to_sentences[key_val].message) + "  is already saved.")
+            try:
+                key_val = str(dissected_sentence.talk_number)
+                Logger.instance.write(
+                    "Adding sentence of TalkNumber: " + str(key_val) + " to the sentence container " + str(len(self.talk_number_to_sentences)))
+                if key_val not in self.talk_number_to_sentences.keys():
+                    self.talk_number_to_sentences[key_val] = dissected_sentence
+                else:
+                    raise Exception("Two sentences shouldn't be saved for the same talk number: " + key_val +
+                                    "Message " + str(dissected_sentence.message) + " can't be saved because the message " +
+                                    str(self.talk_number_to_sentences[key_val].message) + "  is already saved.")
+            except Exception as e:
+                print("EXCEPTION AT SENTENCE CONTAINER ADD SENTENCE")
+                print(e)
 
         def get_sentence(self, talk_number):
-            return self.talk_number_to_sentences[str(talk_number)]
+            try:
+                sentence = self.talk_number_to_sentences[str(talk_number)]
+                return sentence
+            except Exception as e:
+                print("EXCEPTION AT SENTENCE CONTAINER get SENTENCE")
+                print(e)
+                return ""
 
         def has_useful_sentence_on_day(self, day, target):
             """
@@ -42,10 +52,13 @@ class SentencesContainer(object):
             :return: List of all talk numbers of useful sentences said in the given day.
             """
             talk_numbers_on_day = []
-            for talk_number, sentence in self.talk_number_to_sentences.items():
-                if TalkNumber.is_on_day(talk_number, day) and sentence.message.subject != target:
-                    talk_numbers_on_day.append(talk_number)
-
+            try:
+                for talk_number, sentence in self.talk_number_to_sentences.items():
+                    if TalkNumber.is_on_day(talk_number, day) and sentence.message.subject != target:
+                        talk_numbers_on_day.append(talk_number)
+            except Exception as e:
+                print("EXCEPTION AT SENTENCE CONTAINER has_useful_sentence_on_day")
+                print(e)
             return talk_numbers_on_day
 
 

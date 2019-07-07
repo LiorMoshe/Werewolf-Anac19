@@ -6,7 +6,6 @@ class Werewolf(Informed):
 
     def __init__(self):
         self.next_attack = None
-        pass
 
     def init_strategy(self, base_info, diff_data, game_setting):
         self._strategy = WolfStrategy([i for i in range(1, self._game_settings._player_num)
