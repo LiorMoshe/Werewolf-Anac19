@@ -59,6 +59,11 @@ class AgentPerspective(object):
     def get_index(self):
         return self._index
 
+    def get_closest_cooperators(self,day):
+        cooperators_fondness = [(self._cooperators[coop].get_fondness(day),coop) for coop in self._cooperators.keys()]
+        #closest_cooperator = cooperators_fondness[np.argmax(cooperators_fondness)][1]
+        return cooperators_fondness#self._cooperators[closest_cooperator]
+
     def get_non_coop_count(self):
         return len(self._noncooperators)
 
@@ -141,7 +146,7 @@ class AgentPerspective(object):
     def has_estimations(self):
         return len(self._estimations) > 0 and self._admitted_role is not None
 
-    def update_perspective(self, message, talk_number, day):
+    def update_perspective(self, message, talk_number, day,save_sen=True):
         """
         Given a new message update my perspective.
         :param message:
@@ -153,7 +158,7 @@ class AgentPerspective(object):
         Logger.instance.write("Dissecting Message: " + str(message.original_message))
         #print("Dissecting Message: " + str(message.original_message))
 
-        result = SentenceDissector.instance.dissect_sentence(message, talk_number, day)
+        result = SentenceDissector.instance.dissect_sentence(message, talk_number, day,save_dissection=save_sen)
 
         if result.is_hostile():
             for enemy in result.get_enemies():

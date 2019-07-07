@@ -108,6 +108,79 @@ class AgentState(ABC):
 
         return question
 
+NIGHT_BASE_QUESTIONS = [do_you_comingout]
+
+class NightAgentState(AgentState):
+
+    def __init__(self, my_agent, agent_indices):
+        self._index = my_agent
+        self._agent_indices = agent_indices
+        self._sentences_said = []
+        self._day = 0
+
+    @abstractmethod
+    def talk(self, task_manager):
+        """
+        Given the task manager that holds all the tasks at hand choose what to say next.
+        :param task_manager:
+        :return:
+        """
+        pass
+
+    @abstractmethod
+    def get_type(self):
+        pass
+
+    @abstractmethod
+    def get_task_mask(self):
+        """
+        Get masking of tasks relevant to current state.
+        :return:
+        """
+
+    def next_day(self):
+        self._day += 1
+
+    def check_sentence_said_before(self, sentence):
+        """
+        We don't want to replicate ourselves if we talk randomly.
+        :param sentence
+        :return:
+        """
+        for said_sentence in self._sentences_said:
+            if compare_sentences(said_sentence, sentence):
+                return True
+
+        return False
+
+    def ask_random_question(self):
+        """
+        Ask a random question toward a random agent target.
+        :return:
+        """
+        random_subject = random.choice(self._agent_indices)
+        random_target = random.choice([x for x in self._agent_indices if x != random_subject])
+        question_pool = NIGHT_BASE_QUESTIONS.copy()
+        params = {}
+
+        # If there is any useful sentence we can ask whether the agents agrees or disagrees.
+        useful_sentences = SentencesContainer.instance.has_useful_sentence_on_day(self._day, random_subject)
+        if len(useful_sentences) != 0:
+            question_pool += [do_you_agree_with, do_you_disagree_with]
+            params["talk_number"] = random.choice(useful_sentences)
+
+        params["subject"] = random_subject
+        params["target"] = random_target
+        temp = random.choice(list(GameRoles))
+        while temp == GameRoles.WEREWOLF:
+            temp = random.choice(list(GameRoles))
+        params["role"] = temp
+
+        return random.choice(question_pool)(**params)
+
+
+
+
 
 
 

@@ -54,3 +54,4 @@ class SentencesContainer(object):
     def __init__(self):
         if not SentencesContainer.instance:
             SentencesContainer.instance = SentencesContainer.__SentencesContainer()
+

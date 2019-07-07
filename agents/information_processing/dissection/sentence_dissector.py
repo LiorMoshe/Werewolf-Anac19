@@ -242,6 +242,7 @@ class SentenceDissector(object):
             elif content.type == SentenceType.NOT:
                 self.update_based_on_not(message, talk_number, dissected_sentence)
             elif content.type == SentenceType.ATTACK or content.type == SentenceType.IDENTIFIED:
+                print("here is the problam")
                 # TODO - Unsure if it's needed only used between werewolves, it's obvious they are cooperators.
                 pass
 

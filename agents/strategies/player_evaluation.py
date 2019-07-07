@@ -176,6 +176,66 @@ class PlayerEvaluation(object):
 
     instance = None
 
-    def __init__(self, indices, my_idx):
+    class __WOLVESPlayerEvaluation(__PlayerEvaluation):
+
+        def __init__(self, indices, my_idx, teammates_indices):
+            self._teammates = teammates_indices
+            self.reset(indices, my_idx)
+
+        def reset(self, indices, my_idx):
+            self._weights = {idx: 1 if idx in self._teammates else EPSILON for idx in indices}
+            self._weights[my_idx] = EPSILON
+            self.index = my_idx
+            self._relevant_players = [idx for idx in indices]
+            self._liars = {}
+            self._last_dead_agent = None
+
+        def player_lied(self, idx, potential_liars):
+            """
+            i dont care if my cooperator lied
+            """
+            potential_liars = [idx for idx in potential_liars if idx not in self._teammates]
+            for i in range(len(potential_liars)):
+                self._liars[potential_liars[i]] = [liar for liar in potential_liars if liar != potential_liars[i]]
+            if potential_liars:
+                self._weights[idx] += float(LYING_FINE / len(potential_liars))
+
+        def player_is_werewolf(self, idx):
+            WEREWOLF_FINE = 0.01
+            if idx not in self._relevant_players:
+                # Player died, check if he has a lying partner that needs to be redeemed.
+                if idx in self._liars:
+                    for potential_liar in self._liars[idx]:
+                        self._weights[potential_liar] = 1
+
+                self._weights[idx] = WEREWOLF_FINE
+
+        def get_dangerous_agent(self):
+            """
+            Get the most dangerous agent among the relevant players.
+            :return:
+            """
+            max_weight = float('-inf')
+            max_idx = None
+
+            for idx in self._relevant_players:
+                if self._weights[idx] > max_weight and idx not in self._teammates:
+                    max_weight = self._weights[idx]
+                    max_idx = idx
+
+            return max_idx
+
+        def player_in_townsfolk(self, idx):
+            HUMAN_FINE = 1000.
+            self._weights[idx] = HUMAN_FINE
+
+        def thinks_im_werewolf(self, idx):
+            HUMAN_FINE = 1000.
+            self._weights[idx] = HUMAN_FINE / 2
+
+    def __init__(self, indices, my_idx, teammates_indices=None):
         if not PlayerEvaluation.instance:
-            PlayerEvaluation.instance = PlayerEvaluation.__PlayerEvaluation(indices, my_idx)
+            if teammates_indices:
+                PlayerEvaluation.instance = PlayerEvaluation.__WOLVESPlayerEvaluation(indices, my_idx, teammates_indices)
+            else:
+                PlayerEvaluation.instance = PlayerEvaluation.__PlayerEvaluation(indices, my_idx)

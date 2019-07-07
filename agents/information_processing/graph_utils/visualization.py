@@ -1,5 +1,5 @@
 import networkx as nx
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from agents.information_processing.graph_utils.group_finder import EdgeType
 
 def color_picker(edge):

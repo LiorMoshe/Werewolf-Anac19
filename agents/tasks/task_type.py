@@ -16,6 +16,8 @@ class TaskType(Enum):
     GUARD_TASK = TaskTuple("GUARD_TASK", False)
     DIVINE_TASK = TaskTuple("DIVINE_TASK", False)
     VOTE_TASK = TaskTuple("VOTE_TASK", False)
+    REQUEST_ATTACK_TASK = TaskTuple("REQUEST_ATTACK_TASK",True)
+    FAKE_ROLE_TASK = TaskTuple('FAKE_ROLE_TASK',False)
 
     def __str__(self):
         return self.name
