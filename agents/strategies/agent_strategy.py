@@ -100,19 +100,21 @@ class TownsFolkStrategy(object):
         :return:
         """
         tasks = []
-        if message.type == SentenceType.REQUEST:
-            Logger.instance.write("GOT REQUEST MESSAGE TO ME " + str(message.original_message))
-            if message.content.type == SentenceType.VOTE:
-                self._vote_model.handle_vote_request(game_graph, message.subject, message.content.target)
+        try:
+            if message.type == SentenceType.REQUEST:
+                Logger.instance.write("GOT REQUEST MESSAGE TO ME " + str(message.original_message))
+                if message.content.type == SentenceType.VOTE:
+                    self._vote_model.handle_vote_request(game_graph, message.subject, message.content.target)
 
 
-        elif message.type == SentenceType.INQUIRE:
-            Logger.instance.write("GOT REQUEST MESSAGE TO ME " + str(message.original_message))
-            if message.content.type == SentenceType.VOTE and message.content.target == "ANY":
-                if message.subject in game_graph.get_node(self._index).get_top_k_cooperators(k=3):
-                    target = self._vote_model.get_vote()
-                    tasks.append(VoteTask(1, self._day, [target], self._index, target))
-
+            elif message.type == SentenceType.INQUIRE:
+                Logger.instance.write("GOT REQUEST MESSAGE TO ME " + str(message.original_message))
+                if message.content.type == SentenceType.VOTE and message.content.target == "ANY":
+                    if message.subject in game_graph.get_node(self._index).get_top_k_cooperators(k=3):
+                        target = self._vote_model.get_vote()
+                        tasks.append(VoteTask(1, self._day, [target], self._index, target))
+        except Exception as e:
+            print("VILLAGER HANDLE MESSAGE ERR "+e)
         return tasks
 
 
@@ -125,10 +127,13 @@ class TownsFolkStrategy(object):
         :return:
         """
         tasks = []
-        for idx, perspective in self._perspectives.items():
-            messages_to_me = perspective.get_and_clean_messages_to_me(self._day)
-            for message in messages_to_me:
-                tasks += self.handle_message(message, game_graph)
+        try:
+            for idx, perspective in self._perspectives.items():
+                messages_to_me = perspective.get_and_clean_messages_to_me(self._day)
+                for message in messages_to_me:
+                    tasks += self.handle_message(message, game_graph)
+        except Exception as e:
+            print("VILLAGER HANDLE MESSAGE ERR "+e)
         return tasks
 
     def update(self, diff_data, request):
@@ -272,12 +277,15 @@ class TownsFolkStrategy(object):
         from our mapping otherwise add his new role to the mapping
         :return:
         """
-        for idx, perspective in self._perspectives.items():
-            admitted_role = perspective.get_admitted_role()
-            if perspective.get_liar_score() == 0 and admitted_role is not None:
-                self._special_roles[admitted_role["role"]] = idx
-            elif perspective.get_liar_score() > 0 and admitted_role["role"] in self._special_roles:
-                del self._special_roles[admitted_role["role"]]
+        try:
+            for idx, perspective in self._perspectives.items():
+                admitted_role = perspective.get_admitted_role()
+                if perspective.get_liar_score() == 0 and admitted_role is not None:
+                    self._special_roles[admitted_role["role"]] = idx
+                elif perspective.get_liar_score() > 0 and admitted_role["role"] in self._special_roles:
+                    del self._special_roles[admitted_role["role"]]
+        except Exception as e:
+            print("VILLAGER HANDLE MESSAGE ERR "+e)
 
 
 
@@ -288,29 +296,36 @@ class TownsFolkStrategy(object):
         :param game_graph
         :return:
         """
-        for idx, perspective in self._perspectives.items():
+        try:
+            for idx, perspective in self._perspectives.items():
 
-            if perspective.get_status() == AgentStatus.ALIVE and perspective.has_estimations():
+                if perspective.get_status() == AgentStatus.ALIVE and perspective.has_estimations():
 
-                    estimations = perspective.get_estimations()
+                        estimations = perspective.get_estimations()
 
 
-                    Logger.instance.write("Checking estimations of Agent" + str(idx))
-                    if idx in game_graph.get_node(self._index).get_top_k_cooperators(k=3):
-                        Logger.instance.write("Agent" + str(self._index) + " is a cooperator, listening to estimations: " + str(estimations))
-                        for agent_idx, estimation in estimations.items():
-                            if estimation == "WEREWOLF":
-                                PlayerEvaluation.instance.player_is_werewolf(agent_idx)
-                            elif estimation == "HUMAN":
-                                PlayerEvaluation.instance.player_in_townsfolk(agent_idx)
+                        Logger.instance.write("Checking estimations of Agent" + str(idx))
+                        if idx in game_graph.get_node(self._index).get_top_k_cooperators(k=3):
+                            Logger.instance.write("Agent" + str(self._index) + " is a cooperator, listening to estimations: " + str(estimations))
+                            for agent_idx, estimation in estimations.items():
+                                if estimation == "WEREWOLF":
+                                    PlayerEvaluation.instance.player_is_werewolf(agent_idx)
+                                elif estimation == "HUMAN":
+                                    PlayerEvaluation.instance.player_in_townsfolk(agent_idx)
+        except Exception as e:
+            print("VILLAGER HANDLE MESSAGE ERR "+e)
 
     def talk(self):
         """
         :return:
         """
-        sentence =  self._agent_state.talk(self._task_manager)
-        Logger.instance.write("I Said: " + sentence)
-        return sentence
+        try:
+            sentence =  self._agent_state.talk(self._task_manager)
+            Logger.instance.write("I Said: " + sentence)
+            return sentence
+        except Exception as e:
+            print("VILLAGER HANDLE MESSAGE ERR "+e)
+            return "Skip"
 
     def generate_tasks(self, game_graph, day):
         """
@@ -371,7 +386,19 @@ class TownsFolkStrategy(object):
             self._agent_state = BaseState(self._index, self._agent_indices)
 
     def vote(self):
-        Logger.instance.write("Voting on day " + str(self._day))
-        result = self._vote_model.get_vote()
-        Logger.instance.write("Voted for Agent" + str(result))
-        return result
+        try:
+            Logger.instance.write("Voting on day " + str(self._day))
+            result = self._vote_model.get_vote()
+            Logger.instance.write("Voted for Agent" + str(result))
+            return result
+        except:
+            try:
+                min = np.inf
+                id = 1
+                for k,v in self._vote_model._vote_scores.items():
+                    if v < min:
+                        id = k
+                        min = v
+                return int(id)
+            except:
+                return int(np.random.choice(self._vote_model._vote_scores.keys()))
