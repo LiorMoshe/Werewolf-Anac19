@@ -13,7 +13,7 @@ class AgentContainer(object):
     and this is the agent which will be passed to the tcp client created by AIWoof.
     """
 
-    def __init__(self, role=NO_ROLE, name='Dummy'):
+    def __init__(self, role=NO_ROLE, name='ROLTK'):
         self._role = role
         self._agent = None
         self._name = name

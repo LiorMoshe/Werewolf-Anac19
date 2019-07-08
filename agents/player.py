@@ -234,13 +234,12 @@ class Player(ABC):
         pass
 
     def update(self, base_info, diff_data, request):
-        # print("Request type: ", request)
-        # print("Received game diff:")
-        # print(diff_data.to_string())
-        if request == "WHISPER":
-            pass
-            # print("Base info: ", base_info)
-        if request == "DAILY_FINISH":
+        print("Request type: ", request)
+        print("Received game diff:")
+        print(diff_data.to_string())
+        if request == Request.WHISPER:
+            print("Base info: ", base_info)
+        if request == Request.DAILY_FINISH:
             self._player_perspective.end_of_day()
         self._player_perspective.update(diff_data)
         self._strategy.update(diff_data, request)

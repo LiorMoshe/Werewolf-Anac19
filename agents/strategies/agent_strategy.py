@@ -323,34 +323,38 @@ class TownsFolkStrategy(object):
         :param day:
         :return:
         """
-        tasks = self._lie_detector.find_matching_admitted_roles(self._perspectives, day)
+        try:
+            tasks = self._lie_detector.find_matching_admitted_roles(self._perspectives, day)
 
-        tasks += self.handle_messages_to_me(game_graph)
+            tasks += self.handle_messages_to_me(game_graph)
 
-        if not self._done_in_day:
-            request_vote_task = PlayerEvaluation.instance.update_evaluation(game_graph, day)
+            if not self._done_in_day:
+                request_vote_task = PlayerEvaluation.instance.update_evaluation(game_graph, day)
 
-            if request_vote_task is not None:
-                tasks.append(request_vote_task)
+                if request_vote_task is not None:
+                    tasks.append(request_vote_task)
 
-            if "BODYGUARD" in self._special_roles and self._role != "BODYGUARD":
-                print("Creating bodyguard task")
+                if "BODYGUARD" in self._special_roles and self._role != "BODYGUARD":
+                    print("Creating bodyguard task")
 
-                tasks.append(GuardTask.generate_guard_task(game_graph, self._index, self._special_roles["BODYGUARD"],
-                                                           PlayerEvaluation.instance.players_alive(), 1, self._day))
+                    tasks.append(GuardTask.generate_guard_task(game_graph, self._index, self._special_roles["BODYGUARD"],
+                                                               PlayerEvaluation.instance.players_alive(), 1, self._day))
 
-            if "SEER" in self._special_roles and self._role != "SEER":
-                print("Creating seer task")
+                if "SEER" in self._special_roles and self._role != "SEER":
+                    print("Creating seer task")
 
-                tasks.append(DivineTask.generate_divine_task(self._index, self._special_roles["SEER"], 1, self._day))
+                    tasks.append(DivineTask.generate_divine_task(self._index, self._special_roles["SEER"], 1, self._day))
 
-            if "MEDIUM" in self._special_roles and self._role != "MEDIUM" and PlayerEvaluation.instance.get_last_dead() is not None:
-                tasks.append(IdentifyTask(1, self._day, [self._special_roles["MEDIUM"], PlayerEvaluation.instance.get_last_dead()],
-                                          self._index, self._special_roles["MEDIUM"], PlayerEvaluation.instance.get_last_dead()))
+                if "MEDIUM" in self._special_roles and self._role != "MEDIUM" and PlayerEvaluation.instance.get_last_dead() is not None:
+                    tasks.append(IdentifyTask(1, self._day, [self._special_roles["MEDIUM"], PlayerEvaluation.instance.get_last_dead()],
+                                              self._index, self._special_roles["MEDIUM"], PlayerEvaluation.instance.get_last_dead()))
 
 
 
-            self._done_in_day = True
+                self._done_in_day = True
+        except Exception as e:
+            print("ERROR WOLF STRATEGY UPDATE")
+            print(e)
         return tasks
 
 
