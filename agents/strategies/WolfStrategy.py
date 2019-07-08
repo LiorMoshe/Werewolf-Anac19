@@ -333,7 +333,7 @@ class WolfStrategy(TownsFolkStrategy):
             try:
                 return np.random.choice(self._humans)
             except:
-                return 1
+                return "1"
         return vote
     #
     # def get_bff(self):
