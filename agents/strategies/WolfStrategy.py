@@ -126,114 +126,119 @@ class WolfStrategy(TownsFolkStrategy):
                 :param diff_data:
                 :return:
                 """
-        #self._group_finder.clean_groups()
-        day = None
-        message_type = None
+        self._group_finder.clean_groups()
+        try:
+            day = None
+            message_type = None
 
-        for i in range(len(diff_data.index)):
-            curr_index = diff_data.loc[i, 'agent']
-            agent_sentence = diff_data.loc[i, 'text']
-            idx = diff_data.loc[i, 'idx']
-            turn = diff_data.loc[i, 'turn']
-            day = diff_data.loc[i, 'day']
-            message_type = MessageType[diff_data.loc[i, 'type'].upper()]
-            talk_number = TalkNumber(day, turn, idx)
-            Logger.instance.write("Got sentence: " + str(agent_sentence) + " from agent " + str(curr_index) + '\n')
+            for i in range(len(diff_data.index)):
+                curr_index = diff_data.loc[i, 'agent']
+                agent_sentence = diff_data.loc[i, 'text']
+                idx = diff_data.loc[i, 'idx']
+                turn = diff_data.loc[i, 'turn']
+                day = diff_data.loc[i, 'day']
+                message_type = MessageType[diff_data.loc[i, 'type'].upper()]
+                talk_number = TalkNumber(day, turn, idx)
+                Logger.instance.write("Got sentence: " + str(agent_sentence) + " from agent " + str(curr_index) + '\n')
 
-            if curr_index in self._perspectives.keys():
-                if agent_sentence not in UNUSEFUL_SENTENCES:
-                    Logger.instance.write("Got Sentence: " + agent_sentence + '\n')
-                    parsed_sentence = self._message_parser.process_sentence(agent_sentence, curr_index, day,
-                                                                            talk_number)
-                if message_type == MessageType.TALK:
+                if curr_index in self._perspectives.keys():
                     if agent_sentence not in UNUSEFUL_SENTENCES:
-                        self._perspectives[curr_index].update_perspective(parsed_sentence, talk_number, day)
-                        if parsed_sentence.type == SentenceType.COMINGOUT:
-                            if parsed_sentence.target == parsed_sentence.subject:
-                                admitted_role = parsed_sentence.role
-                                if admitted_role == self.fake_rol and not self.come_out_role:
-                                    self.come_out_role = True
-                elif message_type == MessageType.VOTE:
-                    self._perspectives[curr_index].update_vote(parsed_sentence)
-                elif message_type == MessageType.EXECUTE:
-                    self._perspectives[curr_index].update_status(AgentStatus.DEAD_TOWNSFOLK)
-                    self._teammates[curr_index].update_status(AgentStatus.DEAD_TOWNSFOLK)
-                    self._vote_model.update_dead_agent(curr_index)
-                    print("AGENT" + str(self._index) + " Player " + str(curr_index) + " died by villagers")
-                    PlayerEvaluation.instance.player_died(curr_index)
-                    if curr_index in self._enemies:
-                        del self._enemies[curr_index]
-                    if curr_index in self._accusing:
-                        del self._accusing[curr_index]
-                    if curr_index in self._humans:
-                        self._humans.remove(curr_index)
-                    elif curr_index in self._wolves:
-                        self._wolves.remove(curr_index)
-                elif message_type == MessageType.DEAD:
-                    self._perspectives[curr_index].update_status(AgentStatus.DEAD_WEREWOLVES)
-                    self._teammates[curr_index].update_status(AgentStatus.DEAD_WEREWOLVES)
-                    self._vote_model.update_dead_agent(curr_index)
-                    self.update_votes_after_death(curr_index)
-                    if curr_index in self._enemies:
-                        del self._enemies[curr_index]
-                    if curr_index in self._accusing:
-                        del self._accusing[curr_index]
-                    if curr_index in self._humans:
-                        self._humans.remove(curr_index)
-                    elif curr_index in self._wolves:
-                        self._wolves.remove(curr_index)
+                        Logger.instance.write("Got Sentence: " + agent_sentence + '\n')
+                        parsed_sentence = self._message_parser.process_sentence(agent_sentence, curr_index, day,
+                                                                                talk_number)
+                    if message_type == MessageType.TALK:
+                        if agent_sentence not in UNUSEFUL_SENTENCES:
+                            self._perspectives[curr_index].update_perspective(parsed_sentence, talk_number, day)
+                            if parsed_sentence.type == SentenceType.COMINGOUT:
+                                if parsed_sentence.target == parsed_sentence.subject:
+                                    admitted_role = parsed_sentence.role
+                                    if admitted_role == self.fake_rol and not self.come_out_role:
+                                        self.come_out_role = True
+                    elif message_type == MessageType.VOTE:
+                        self._perspectives[curr_index].update_vote(parsed_sentence)
+                    elif message_type == MessageType.EXECUTE:
+                        self._perspectives[curr_index].update_status(AgentStatus.DEAD_TOWNSFOLK)
+                        self._teammates[curr_index].update_status(AgentStatus.DEAD_TOWNSFOLK)
+                        self._vote_model.update_dead_agent(curr_index)
+                        print("AGENT" + str(self._index) + " Player " + str(curr_index) + " died by villagers")
+                        PlayerEvaluation.instance.player_died(curr_index)
+                        if curr_index in self._enemies:
+                            del self._enemies[curr_index]
+                        if curr_index in self._accusing:
+                            del self._accusing[curr_index]
+                        if curr_index in self._humans:
+                            self._humans.remove(curr_index)
+                        elif curr_index in self._wolves:
+                            self._wolves.remove(curr_index)
+                    elif message_type == MessageType.DEAD:
+                        self._perspectives[curr_index].update_status(AgentStatus.DEAD_WEREWOLVES)
+                        self._teammates[curr_index].update_status(AgentStatus.DEAD_WEREWOLVES)
+                        self._vote_model.update_dead_agent(curr_index)
+                        self.update_votes_after_death(curr_index)
+                        if curr_index in self._enemies:
+                            del self._enemies[curr_index]
+                        if curr_index in self._accusing:
+                            del self._accusing[curr_index]
+                        if curr_index in self._humans:
+                            self._humans.remove(curr_index)
+                        elif curr_index in self._wolves:
+                            self._wolves.remove(curr_index)
 
-                elif message_type == MessageType.ATTACK_VOTE:#TODO
-                    self._teammates[curr_index].update_vote(parsed_sentence)
-                elif message_type == MessageType.WHISPER:
-                    if agent_sentence not in UNUSEFUL_SENTENCES:
-                        self._teammates[curr_index].update_perspective(parsed_sentence, talk_number, day,save_sen=False)
+                    elif message_type == MessageType.ATTACK_VOTE:#TODO
+                        self._teammates[curr_index].update_vote(parsed_sentence)
+                    elif message_type == MessageType.WHISPER:
+                        if agent_sentence not in UNUSEFUL_SENTENCES:
+                            self._teammates[curr_index].update_perspective(parsed_sentence, talk_number, day,save_sen=False)
 
-                elif message_type == MessageType.FINISH:
-                    self._perspectives[curr_index].update_real_role(parsed_sentence.role)
-                    #self._group_finder.set_player_role(curr_index, parsed_sentence.role)
+                    elif message_type == MessageType.FINISH:
+                        self._perspectives[curr_index].update_real_role(parsed_sentence.role)
+                        self._group_finder.set_player_role(curr_index, parsed_sentence.role)
 
-                self._perspectives[curr_index].switch_sides(day)
-            else:
-                # This is my index, save my own sentences if we need to reflect them in the future.
-                self._message_parser.add_my_sentence(self._index, agent_sentence, day, talk_number)
+                    self._perspectives[curr_index].switch_sides(day)
+                else:
+                    # This is my index, save my own sentences if we need to reflect them in the future.
+                    self._message_parser.add_my_sentence(self._index, agent_sentence, day, talk_number)
 
 
-        game_graph = self._group_finder.find_groups(self._perspectives, day) #TODO
-        # If there is new data, check if new tasks can be created.
-        if len(diff_data.index) > 0:
-            self.handle_estimations(game_graph)
-            tasks = self.generate_tasks(game_graph, day)
-            for t in tasks:
-                if t.get_type() == TaskType.SAME_ADMITTED_ROLE:
-                    self._night_task_manager.add_task(t)
-            self._task_manager.add_tasks(tasks)
-            self._task_manager.update_tasks_importance(day)
-            self._night_task_manager.update_tasks_importance(day)
+            game_graph = self._group_finder.find_groups(self._perspectives, day) #TODO
+            # If there is new data, check if new tasks can be created.
+            if len(diff_data.index) > 0:
+                self.handle_estimations(game_graph)
+                tasks = self.generate_tasks(game_graph, day)
+                for t in tasks:
+                    if t.get_type() == TaskType.SAME_ADMITTED_ROLE:
+                        self._night_task_manager.add_task(t)
+                self._task_manager.add_tasks(tasks)
+                self._task_manager.update_tasks_importance(day)
+                self._night_task_manager.update_tasks_importance(day)
 
-            # Make sure we update the day of the game, used for discounting.
-            self._day = day
+                # Make sure we update the day of the game, used for discounting.
+                self._day = day
 
-        self.update_state()
-        self.update_roles()
+            self.update_state()
+            self.update_roles()
 
-        # Note: In case you try running several games together you cant use the visualization.
-        if message_type == MessageType.FINISH:
-            # visualize(game_graph)
-            SentencesContainer.instance.clean()
-            PlayerEvaluation.instance.reset(self._agent_indices, self._index)
-            RoleEstimations.instance.reset(self._agent_indices, self._index)
+            # Note: In case you try running several games together you cant use the visualization.
+            if message_type == MessageType.FINISH:
+                # visualize(game_graph)
+                SentencesContainer.instance.clean()
+                PlayerEvaluation.instance.reset(self._agent_indices, self._index)
+                RoleEstimations.instance.reset(self._agent_indices, self._index)
 
-        # At the end of the day reset the scores accumulated by the vote model.
-        if request == "DAILY_FINISH":
-            #self._vote_model.clear_scores()
-            self._done_in_day = False
+            # At the end of the day reset the scores accumulated by the vote model.
+            if request == "DAILY_FINISH":
+                #self._vote_model.clear_scores()
+                self._done_in_day = False
 
-        elif request == "VOTE":
-            PlayerEvaluation.instance.log()
-            updated_scores = game_graph.get_players_voting_scores()
-            for agent_idx, score in updated_scores.items():
-                self._vote_model.update_vote(agent_idx, score)
+            elif request == "VOTE":
+                PlayerEvaluation.instance.log()
+                updated_scores = game_graph.get_players_voting_scores()
+                for agent_idx, score in updated_scores.items():
+                    self._vote_model.update_vote(agent_idx, score)
+        except Exception as e:
+            print("ERROR WOLF STRATEGY UPDATE")
+            print(e)
+
 
 
     def generate_talk(self):
@@ -304,25 +309,32 @@ class WolfStrategy(TownsFolkStrategy):
                         self._vote_model.set_to_max_score(talking_agent_idx)
 
     def get_next_attck(self):
-        self._day += 1
-        self._night_task_manager._pop_all()
-        self._task_manager._pop_all()
-        if self.come_out_role and (self.fake_rol == GameRoles.SEER or self.fake_rol == GameRoles.MEDIUM):
-            temp = np.random.choice(self.fake_role_tasks)
-            self.fake_role_tasks.remove(temp)
-            if temp in self._wolves:
-                frind = True
-            else:
-                frind = np.random.choice([False,True],p=[0.4,0.6])
-            t = FakeRoleTask(temp,1000,self._day,[self._index],self._index,self.fake_rol,frind)
-            self._task_manager.add_task(t)
-        team_attack = self.get_best_attak_for_team()
-        team_risk = 0.5
-        my_attack = max(self._enemies.items(), key=operator.itemgetter(1))[0]
-        my_risk = 0.35
-        spichel_attack = np.random.choice(self._humans)
-        random_risk = 0.15
-        return np.random.choice([my_attack, team_attack,spichel_attack], p=[my_risk, team_risk,random_risk])
+        try:
+            self._day += 1
+            self._night_task_manager._pop_all()
+            self._task_manager._pop_all()
+            if self.come_out_role and (self.fake_rol == GameRoles.SEER or self.fake_rol == GameRoles.MEDIUM):
+                temp = np.random.choice(self.fake_role_tasks)
+                self.fake_role_tasks.remove(temp)
+                if temp in self._wolves:
+                    frind = True
+                else:
+                    frind = np.random.choice([False,True],p=[0.4,0.6])
+                t = FakeRoleTask(temp,1000,self._day,[self._index],self._index,self.fake_rol,frind)
+                self._task_manager.add_task(t)
+            team_attack = self.get_best_attak_for_team()
+            team_risk = 0.5
+            my_attack = max(self._enemies.items(), key=operator.itemgetter(1))[0] if len(self._enemies.items()) >0 else np.random.choice(self._humans)
+            my_risk = 0.35
+            spichel_attack = np.random.choice(self._humans)
+            random_risk = 0.15
+            vote = np.random.choice([my_attack, team_attack,spichel_attack], p=[my_risk, team_risk,random_risk])
+        except:
+            try:
+                return np.random.choice(self._humans)
+            except:
+                return 1
+        return vote
     #
     # def get_bff(self):
     #     vote_for = self.get_best_vote_opt()
@@ -337,14 +349,18 @@ class WolfStrategy(TownsFolkStrategy):
         """
         :return:
         """
-        if self.fake_rol == None:
-            self.fake_rol = np.random.choice(['SEER','VILLAGER','MEDIUM'])
-            return "COMINGOUT Agent[{me}] {rol}".\
-                    format(rol=self.fake_rol,me=str(self._index))
-        new_kill_task = RequestAttackTask(max(self._enemies.items(), key=operator.itemgetter(1))[0],1000,self._day,[self._index],self._index)
-        self._night_task_manager.add_task(new_kill_task)
-        sentence = self._agent_night_state.talk(self._night_task_manager)
-        Logger.instance.write("I Said: " + sentence)
+        try:
+            if self.fake_rol == None:
+                self.fake_rol = np.random.choice(['SEER','VILLAGER','MEDIUM'])
+                return "COMINGOUT Agent[{me}] {rol}".\
+                        format(rol=self.fake_rol,me=str(self._index))
+            new_kill_task = RequestAttackTask(max(self._enemies.items(), key=operator.itemgetter(1))[0],1000,self._day,[self._index],self._index)
+            self._night_task_manager.add_task(new_kill_task)
+            sentence = self._agent_night_state.talk(self._night_task_manager)
+            Logger.instance.write("I Said: " + sentence)
+        except Exception as e:
+            print("WOLF WHISPER ERR "+e)
+            return "Skip"
         return sentence
 
     def update_night_state(self):
@@ -353,14 +369,21 @@ class WolfStrategy(TownsFolkStrategy):
         at given moments.
         :return:
         """
-        if self._day > 0 and self._agent_night_state.get_type() == StateType.NIGHT_ONE:
-            Logger.instance.write("Updated night state to Base State from Day One State")
-            self._agent_night_state = BaseState(self._index, self._agent_indices)
+        try:
+            if self._day > 0 and self._agent_night_state.get_type() == StateType.NIGHT_ONE:
+                Logger.instance.write("Updated night state to Base State from Day One State")
+                self._agent_night_state = BaseState(self._index, self._agent_indices)
+        except Exception as e:
+            print("ER UPDATE WOLF NIGHT STATE "+ e)
 
     def get_best_attak_for_team(self):
-        eneamy = {}
-        for cop,cop_persp in self._teammates.items():
-            temp = cop_persp.get_enemies()
-            for id,t_enemy in temp.items():
-                eneamy[id] = eneamy.get(id,0) + t_enemy.get_hostility(self._day)
+        try:
+            eneamy = {}
+            for cop,cop_persp in self._teammates.items():
+                temp = cop_persp.get_enemies()
+                for id,t_enemy in temp.items():
+                    eneamy[id] = eneamy.get(id,0) + t_enemy.get_hostility(self._day)
+        except Exception as e:
+            print("WOLF "+e)
+            return []
         return max(eneamy.items(), key=operator.itemgetter(1))[0]

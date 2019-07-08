@@ -162,6 +162,8 @@ class PlayerEvaluation(object):
             # Look at the most dangerous agent.
             dangerous_idx = self.get_dangerous_agent()
             dangerous_node = game_graph.get_node(dangerous_idx)
+            if dangerous_node is None:
+                return None
             Logger.instance.write("Dangerous: " + str(dangerous_idx) + " num haters: " + str(dangerous_node.num_haters()))
             # If less than third of the players don't like him, gain traction by creating a task against him.
             task = None

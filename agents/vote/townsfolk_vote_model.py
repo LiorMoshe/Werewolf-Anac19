@@ -67,4 +67,9 @@ class TownsfolkVoteModel(object):
             Logger.instance.write("Requesting agent is a cooperator, maxing out his vote request")
             self.set_to_max_score(target)
 
-
+class PossessedVoteModel(TownsfolkVoteModel):
+    def get_vote(self):
+        min_idx, min_vote_score = min(self._vote_scores.items(), key=itemgetter(1))
+        if min_vote_score == 0:
+            return random.choice(self.get_vottable_agents())
+        return min_idx
