@@ -19,28 +19,19 @@ class SentencesContainer(object):
             Logger.instance.write("Len: " + str(len(self.talk_number_to_sentences)))
 
         def add_sentence(self, dissected_sentence):
-            try:
-                key_val = str(dissected_sentence.talk_number)
-                Logger.instance.write(
-                    "Adding sentence of TalkNumber: " + str(key_val) + " to the sentence container " + str(len(self.talk_number_to_sentences)))
-                if key_val not in self.talk_number_to_sentences.keys():
-                    self.talk_number_to_sentences[key_val] = dissected_sentence
-                else:
-                    raise Exception("Two sentences shouldn't be saved for the same talk number: " + key_val +
-                                    "Message " + str(dissected_sentence.message) + " can't be saved because the message " +
-                                    str(self.talk_number_to_sentences[key_val].message) + "  is already saved.")
-            except Exception as e:
-                print("EXCEPTION AT SENTENCE CONTAINER ADD SENTENCE")
-                print(e)
+            key_val = str(dissected_sentence.talk_number)
+            Logger.instance.write(
+                "Adding sentence of TalkNumber: " + str(key_val) + " to the sentence container " + str(len(self.talk_number_to_sentences)))
+            if key_val not in self.talk_number_to_sentences.keys():
+                self.talk_number_to_sentences[key_val] = dissected_sentence
+            else:
+                raise Exception("Two sentences shouldn't be saved for the same talk number: " + key_val +
+                                "Message " + str(dissected_sentence.message) + " can't be saved because the message " +
+                                str(self.talk_number_to_sentences[key_val].message) + "  is already saved.")
 
         def get_sentence(self, talk_number):
-            try:
-                sentence = self.talk_number_to_sentences[str(talk_number)]
-                return sentence
-            except Exception as e:
-                print("EXCEPTION AT SENTENCE CONTAINER get SENTENCE")
-                print(e)
-                return ""
+            sentence = self.talk_number_to_sentences[str(talk_number)]
+            return sentence
 
         def has_useful_sentence_on_day(self, day, target):
             """
