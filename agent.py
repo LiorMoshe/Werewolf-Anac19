@@ -10,7 +10,6 @@ Sample of an agent based on the aiwolfpy standards.
 class Werewolf(object):
 
     def __init__(self):
-        self.msg_manager = None;
         pass
 
     def getName(self):
@@ -52,9 +51,7 @@ class Werewolf(object):
         pass
 
     def update(self, base_info, diff_data, request):
-        print("Got request of type: ", request)
-        self.msg_manager.add_messages(diff_data)
-        self.msg_manager.update_base_info(base_info)
+        pass
 
 
 if __name__=="__main__":
