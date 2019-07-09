@@ -214,7 +214,7 @@ class Bodyguard(Villager):
                         voted_agent = int(diff_data.loc[line_num,"text"].split("[")[1][:-1])
                         voted_agents.setdefault(voted_agent, []).append(diff_data.loc[line_num,"agent"])
                     except ValueError:
-                        pass
+                        continue
 
             voted_agents[self.last_guarded] = []
             if self.last_attacked is not None:

@@ -113,8 +113,8 @@ class TownsFolkStrategy(object):
                     if message.subject in game_graph.get_node(self._index).get_top_k_cooperators(k=3):
                         target = self._vote_model.get_vote()
                         tasks.append(VoteTask(1, self._day, [target], self._index, target))
-        except Exception as e:
-            print("VILLAGER HANDLE MESSAGE ERR "+e)
+        except:
+            print("VILLAGER HANDLE MESSAGE ERR ")
         return tasks
 
 
@@ -132,8 +132,8 @@ class TownsFolkStrategy(object):
                 messages_to_me = perspective.get_and_clean_messages_to_me(self._day)
                 for message in messages_to_me:
                     tasks += self.handle_message(message, game_graph)
-        except Exception as e:
-            print("VILLAGER HANDLE MESSAGE ERR "+e)
+        except:
+            print("VILLAGER HANDLE MESSAGE ERR ")
         return tasks
 
     def update(self, diff_data, request):
@@ -258,9 +258,8 @@ class TownsFolkStrategy(object):
                 updated_scores = game_graph.get_players_voting_scores()
                 for agent_idx, score in updated_scores.items():
                     self._vote_model.update_vote(agent_idx, score)
-        except Exception as e:
+        except:
             print("AGENT STRATEGY EXCEPTION IN UPDATE:")
-            print(e)
 
 
     def update_votes_after_death(self, idx):
@@ -284,8 +283,8 @@ class TownsFolkStrategy(object):
                     self._special_roles[admitted_role["role"]] = idx
                 elif perspective.get_liar_score() > 0 and admitted_role["role"] in self._special_roles:
                     del self._special_roles[admitted_role["role"]]
-        except Exception as e:
-            print("VILLAGER HANDLE MESSAGE ERR "+e)
+        except:
+            print("VILLAGER HANDLE MESSAGE ERR ")
 
 
 
@@ -312,8 +311,8 @@ class TownsFolkStrategy(object):
                                     PlayerEvaluation.instance.player_is_werewolf(agent_idx)
                                 elif estimation == "HUMAN":
                                     PlayerEvaluation.instance.player_in_townsfolk(agent_idx)
-        except Exception as e:
-            print("VILLAGER HANDLE MESSAGE ERR "+e)
+        except:
+            print("VILLAGER HANDLE MESSAGE ERR ")
 
     def talk(self):
         """
@@ -323,8 +322,8 @@ class TownsFolkStrategy(object):
             sentence =  self._agent_state.talk(self._task_manager)
             Logger.instance.write("I Said: " + sentence)
             return sentence
-        except Exception as e:
-            print("VILLAGER HANDLE MESSAGE ERR "+e)
+        except:
+            print("VILLAGER HANDLE MESSAGE ERR ")
             return "Skip"
 
     def generate_tasks(self, game_graph, day):
@@ -367,9 +366,8 @@ class TownsFolkStrategy(object):
 
 
                 self._done_in_day = True
-        except Exception as e:
+        except:
             print("ERROR WOLF STRATEGY UPDATE")
-            print(e)
         return tasks
 
 

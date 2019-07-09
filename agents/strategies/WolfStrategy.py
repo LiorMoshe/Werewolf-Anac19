@@ -235,9 +235,8 @@ class WolfStrategy(TownsFolkStrategy):
                 updated_scores = game_graph.get_players_voting_scores()
                 for agent_idx, score in updated_scores.items():
                     self._vote_model.update_vote(agent_idx, score)
-        except Exception as e:
+        except:
             print("ERROR WOLF STRATEGY UPDATE")
-            print(e)
 
 
 
@@ -358,8 +357,8 @@ class WolfStrategy(TownsFolkStrategy):
             self._night_task_manager.add_task(new_kill_task)
             sentence = self._agent_night_state.talk(self._night_task_manager)
             Logger.instance.write("I Said: " + sentence)
-        except Exception as e:
-            print("WOLF WHISPER ERR "+e)
+        except:
+            print("WOLF WHISPER ERR ")
             return "Skip"
         return sentence
 
@@ -373,8 +372,8 @@ class WolfStrategy(TownsFolkStrategy):
             if self._day > 0 and self._agent_night_state.get_type() == StateType.NIGHT_ONE:
                 Logger.instance.write("Updated night state to Base State from Day One State")
                 self._agent_night_state = BaseState(self._index, self._agent_indices)
-        except Exception as e:
-            print("ER UPDATE WOLF NIGHT STATE "+ e)
+        except:
+            print("ER UPDATE WOLF NIGHT STATE ")
 
     def get_best_attak_for_team(self):
         try:
@@ -383,7 +382,7 @@ class WolfStrategy(TownsFolkStrategy):
                 temp = cop_persp.get_enemies()
                 for id,t_enemy in temp.items():
                     eneamy[id] = eneamy.get(id,0) + t_enemy.get_hostility(self._day)
-        except Exception as e:
-            print("WOLF "+e)
+        except:
+            print("WOLF ")
             return []
         return max(eneamy.items(), key=operator.itemgetter(1))[0]
