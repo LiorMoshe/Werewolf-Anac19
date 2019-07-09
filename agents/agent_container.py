@@ -54,22 +54,43 @@ class AgentContainer(object):
         self._agent.dayStart()
 
     def talk(self):
-        return self._agent.talk()
+        try:
+            return self._agent.talk()
+        except:
+            return "OVER"
 
     def whisper(self):
-        return self._agent.whisper()
+        try:
+            return self._agent.whisper()
+        except:
+            return "OVER"
 
     def vote(self):
-        return self._agent.vote()
+        try:
+            return self._agent.vote()
+        except:
+            return "1"
 
     def attack(self):
-        return self._agent.attack()
+        try:
+            return self._agent.attack()
+        except:
+            return "1"
 
     def divine(self):
-        return self._agent.divine()
+        try:
+            return self._agent.divine()
+        except:
+            return "1"
 
     def guard(self):
-        return self._agent.guard()
+        try:
+            return self._agent.guard()
+        except:
+            return "1"
 
     def finish(self):
-        return self._agent.finish()
+        try:
+            return self._agent.finish()
+        except:
+            return "1"
